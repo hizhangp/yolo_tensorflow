@@ -63,7 +63,6 @@ class Detector(object):
 
     def detect_from_cvmat(self, inputs):
 
-        # net_output = self.sess.run(self.net.pred_33, feed_dict={self.net.x: inputs})
         net_output = self.sess.run(self.net.fc_32, feed_dict={self.net.x: inputs})
         results = []
         for i in range(net_output.shape[0]):
@@ -74,10 +73,6 @@ class Detector(object):
     def interpret_output(self, output):
         probs = np.zeros((self.cell_size, self.cell_size,
                           self.boxes_per_cell, self.num_class))
-        # class_probs = output[:, :, :self.num_class]
-        # scales = output[:, :, self.num_class:self.num_class + self.boxes_per_cell]
-        # boxes = output[:, :, self.num_class + self.boxes_per_cell:]
-        # boxes = np.reshape(boxes, [self.cell_size, self.cell_size, self.boxes_per_cell, 4])
         class_probs = np.reshape(output[0:self.boundary1], ( self.cell_size, self.cell_size, self.num_class))
         scales = np.reshape(output[self.boundary1:self.boundary2], (self.cell_size, self.cell_size, self.boxes_per_cell))
         boxes = np.reshape(output[self.boundary2:], (self.cell_size, self.cell_size, self.boxes_per_cell, 4))
@@ -165,15 +160,15 @@ class Detector(object):
 
 
 def main():
-    cfg.GPU = '1'
-    # cfg.THRESHOLD = 0.1
     os.environ['CUDA_VISIBLE_DEVICES'] = cfg.GPU
+    
     yolo = YOLONet('test')
-    weight_file = 'data/output/2016_10_25_16_51/save.ckpt-1000'
-    # weight_file = 'data/weights/YOLO_small.ckpt'
+    weight_file = 'data/weights/YOLO_small.ckpt'
     detector = Detector(yolo, weight_file)
+
     cap = cv2.VideoCapture(-1)
     detector.camera_detector(cap)
+
     imname = 'test/person.jpg'
     detector.image_detector(imname)
 

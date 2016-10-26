@@ -33,7 +33,6 @@ class YOLONet(object):
 
         self.build_networks()
 
-        # self.global_step = tf.Variable(0, trainable=False)
 
     def build_networks(self):
         if self.disp_console:
@@ -134,13 +133,7 @@ class YOLONet(object):
 
 
     def calc_iou(self, boxes1, boxes2):
-        """calculate ious
-        Args:
-          boxes1: 4-D tensor [CELL_SIZE, CELL_SIZE, BOXES_PER_CELL, 4]  ====> (x_center, y_center, w, h)
-          boxes2: 1-D tensor [4] ===> (x_center, y_center, w, h)
-        Return:
-          iou: 3-D tensor [CELL_SIZE, CELL_SIZE, BOXES_PER_CELL]
-        """
+
         boxes1 = tf.pack([boxes1[:, :, :, :, 0] - boxes1[:, :, :, :, 2] / 2, boxes1[:, :, :, :, 1] - boxes1[:, :, :, :, 3] / 2,
                       boxes1[:, :, :, :, 0] + boxes1[:, :, :, :, 2] / 2, boxes1[:, :, :, :, 1] + boxes1[:, :, :, :, 3] / 2])
         boxes1 = tf.transpose(boxes1, [1, 2, 3, 4, 0])
@@ -187,7 +180,6 @@ class YOLONet(object):
 
         iou_predict_truth = self.calc_iou(predict_boxes_tran, boxes)
 
-
         object_mask = tf.reduce_max(iou_predict_truth, 3, keep_dims=True)
         object_mask = tf.cast((iou_predict_truth >= object_mask), tf.float32) * response
 
@@ -200,20 +192,27 @@ class YOLONet(object):
         boxes_tran = tf.transpose(boxes_tran, [1, 2, 3, 4, 0])
 
         # class_loss
-        class_loss = tf.reduce_mean(tf.reduce_sum(tf.square(response * (predict_classes - classes)), reduction_indices=[1, 2, 3]) * self.class_scale, name='class_loss')
+        class_loss = tf.reduce_mean(tf.reduce_sum(tf.square(response * (predict_classes - classes)),
+                                                  reduction_indices=[1, 2, 3]) * self.class_scale, name='class_loss')
 
         # object_loss
-        object_loss = tf.reduce_mean(tf.reduce_sum(tf.square(object_mask * (predict_scales - iou_predict_truth)), reduction_indices=[1, 2, 3]) * self.object_scale, name='object_loss')
+        object_loss = tf.reduce_mean(tf.reduce_sum(tf.square(object_mask * (predict_scales - iou_predict_truth)),
+                                                   reduction_indices=[1, 2, 3]) * self.object_scale, name='object_loss')
 
         # noobject_loss
-        noobject_loss = tf.reduce_mean(tf.reduce_sum(tf.square(noobject_mask * predict_scales), reduction_indices=[1, 2, 3]) * self.noobject_scale, name='noobject_loss')
+        noobject_loss = tf.reduce_mean(
+            tf.reduce_sum(tf.square(noobject_mask * predict_scales), reduction_indices=[1, 2, 3]) * self.noobject_scale,
+            name='noobject_loss')
 
         # coord_loss
         coord_mask = tf.reshape(object_mask, [self.batch_size, self.cell_size, self.cell_size, self.boxes_per_cell, 1])
         boxes_delta = coord_mask * (predict_boxes - boxes_tran)
-        coord_loss = tf.reduce_mean(tf.reduce_sum(tf.square(boxes_delta), reduction_indices=[1, 2, 3, 4]) * self.coord_scale, name='coord_loss')
+        coord_loss = tf.reduce_mean(
+            tf.reduce_sum(tf.square(boxes_delta), reduction_indices=[1, 2, 3, 4]) * self.coord_scale, name='coord_loss')
 
-        iou_loss = tf.reduce_mean(tf.reduce_sum(tf.square(object_mask), reduction_indices=[1, 2, 3]), name='iou_loss')
+        iou_loss = tf.reduce_mean(
+            tf.reduce_sum(tf.square(object_mask), reduction_indices=[1, 2, 3]),
+            name='iou_loss')
 
         tf.scalar_summary(self.phase + '/class_loss', class_loss)
         tf.scalar_summary(self.phase + '/object_loss', object_loss)
