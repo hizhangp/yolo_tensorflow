@@ -154,21 +154,25 @@ class YOLONet(object):
         square1 = (boxes1[:, :, :, :, 2] - boxes1[:, :, :, :, 0]) * (boxes1[:, :, :, :, 3] - boxes1[:, :, :, :, 1])
         square2 = (boxes2[:, :, :, :, 2] - boxes2[:, :, :, :, 0]) * (boxes2[:, :, :, :, 3] - boxes2[:, :, :, :, 1])
 
+        # union
         union_square = tf.maximum(square1 + square2 - inter_square, 1e-10)
 
         return tf.clip_by_value(inter_square / union_square, 1e-10, 1.0)
 
     def loss_layer(self, idx, predicts, labels):
 
+        # predicted data
         predict_classes = tf.reshape(predicts[:, :self.boundary1], (self.batch_size, self.cell_size, self.cell_size, self.num_class))
         predict_scales = tf.reshape(predicts[:, self.boundary1:self.boundary2], (self.batch_size, self.cell_size, self.cell_size, self.boxes_per_cell))
         predict_boxes = tf.reshape(predicts[:, self.boundary2:], (self.batch_size, self.cell_size, self.cell_size, self.boxes_per_cell, 4))
 
+        # input labels
         response = tf.reshape(labels[:, :, :, 0], [self.batch_size, self.cell_size, self.cell_size, 1])
         boxes = tf.reshape(labels[:, :, :, 1:5], [self.batch_size, self.cell_size, self.cell_size, 1, 4])
         boxes = tf.tile(boxes, [1, 1, 1, self.boxes_per_cell, 1]) / self.image_size
         classes = labels[:, :, :, 5:]
 
+        # transform predicted boxes to boxes format
         offset = tf.constant(self.offset, dtype=tf.float32)
         offset = tf.reshape(offset, [1, self.cell_size, self.cell_size, self.boxes_per_cell])
         offset = tf.tile(offset, [self.batch_size, 1, 1, 1])
@@ -178,13 +182,17 @@ class YOLONet(object):
                                       tf.square(predict_boxes[:, :, :, :, 3])])
         predict_boxes_tran = tf.transpose(predict_boxes_tran, [1, 2, 3, 4, 0])
 
+        # calculate iou
         iou_predict_truth = self.calc_iou(predict_boxes_tran, boxes)
 
+        # object coordinate
         object_mask = tf.reduce_max(iou_predict_truth, 3, keep_dims=True)
         object_mask = tf.cast((iou_predict_truth >= object_mask), tf.float32) * response
 
+        # noobject coordinate
         noobject_mask = tf.ones_like(object_mask, dtype=tf.float32) - object_mask
 
+        # transform boxes to predicted boxes format
         boxes_tran = tf.pack([boxes[:, :, :, :, 0] * self.cell_size - offset,
                               boxes[:, :, :, :, 1] * self.cell_size - tf.transpose(offset, (0, 2, 1, 3)),
                               tf.sqrt(boxes[:, :, :, :, 2]),
@@ -210,10 +218,12 @@ class YOLONet(object):
         coord_loss = tf.reduce_mean(
             tf.reduce_sum(tf.square(boxes_delta), reduction_indices=[1, 2, 3, 4]) * self.coord_scale, name='coord_loss')
 
+        # iou loss
         iou_loss = tf.reduce_mean(
-            tf.reduce_sum(tf.square(object_mask), reduction_indices=[1, 2, 3]),
+            tf.reduce_sum(tf.square(object_mask * iou_predict_truth), reduction_indices=[1, 2, 3]),
             name='iou_loss')
 
+        # tensorboard summary
         tf.scalar_summary(self.phase + '/class_loss', class_loss)
         tf.scalar_summary(self.phase + '/object_loss', object_loss)
         tf.scalar_summary(self.phase + '/noobject_loss', noobject_loss)

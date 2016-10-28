@@ -22,6 +22,7 @@ class Solver(object):
         self.output_dir = os.path.join(cfg.OUTPUT_DIR, datetime.datetime.now().strftime('%Y_%m_%d_%H_%M'))
         if not os.path.exists(self.output_dir):
             os.makedirs(self.output_dir)
+        # save configuration
         self.save_cfg()
 
         self.learning_rate = tf.placeholder(tf.float32)
@@ -35,35 +36,43 @@ class Solver(object):
         self.sess = tf.Session()
         self.sess.run(tf.initialize_all_variables())
 
+        # load pre-trained model
         if self.weights_file is not None:
             print 'Restoring weights from: ' + self.weights_file
             self.saver.restore(self.sess, self.weights_file)
 
+        # add graph to summary
         self.writer.add_graph(self.sess.graph)
 
     def train(self):
 
+        # timer
         train_timer = Timer()
         load_timer = Timer()
 
         for step in xrange(1, self.max_iter + 1):
             learning_rate = cfg.LEARNING_RATE * (0.1 ** (step // self.step_size))
+            # load data
             load_timer.tic()
             images, labels = self.data.get()
             load_timer.toc()
             feed_dict = {self.net.x: images, self.net.labels: labels, self.learning_rate: learning_rate}
             if step % self.display_iter == 0:
+                # get summary
                 train_timer.tic()
                 summary_str, loss, _ = self.sess.run([self.summary_op, self.net.loss, self.optimizer],feed_dict=feed_dict)
                 train_timer.toc()
+                # write summary
                 self.writer.add_summary(summary_str, global_step=self.global_step.eval(session=self.sess))
                 print 'Step: {:5d}, Train Loss: {:6.2f}, Speed: {:.3f}s/iter, Time Remain: {}'.format(self.global_step.eval(session=self.sess), loss, train_timer.average_time, train_timer.remain(step, self.max_iter))
                 # print 'Loading time: {:.3f}s/iter'.format(load_timer.average_time)
             else:
+                # train
                 train_timer.tic()
                 loss, _ = self.sess.run([self.net.loss, self.optimizer],feed_dict=feed_dict)
                 train_timer.toc()
 
+            # save check point
             if step % self.save_iter == 0:
                 print '[{}] Saving check point file to: {}'.format(datetime.datetime.now().strftime('%d/%m/%Y, %H:%M'), self.output_dir)
                 self.saver.save(self.sess, self.ckpt_file, global_step=self.global_step)
