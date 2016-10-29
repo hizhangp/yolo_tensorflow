@@ -14,6 +14,7 @@ class Detector(object):
     def __init__(self, net, weight_file):
         self.net = net
         self.weights_file = weight_file
+
         self.classes = cfg.CLASSES
         self.num_class = len(self.classes)
         self.image_size = cfg.IMAGE_SIZE
@@ -32,7 +33,6 @@ class Detector(object):
         self.saver.restore(self.sess, self.weights_file)
 
     def draw_result(self, img, result):
-
         for i in range(len(result)):
             x = int(result[i][1])
             y = int(result[i][2])
@@ -44,7 +44,6 @@ class Detector(object):
             cv2.putText(img, result[i][0] + ' : %.2f' % result[i][5], (x - w + 5, y - h - 7), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 1, cv2.CV_AA)
 
     def detect(self, img):
-
         img_h, img_w, _ = img.shape
         inputs = cv2.resize(img, (self.image_size, self.image_size))
         inputs = cv2.cvtColor(inputs, cv2.COLOR_BGR2RGB).astype(np.float32)
@@ -62,8 +61,7 @@ class Detector(object):
         return result
 
     def detect_from_cvmat(self, inputs):
-
-        net_output = self.sess.run(self.net.fc_32, feed_dict={self.net.x: inputs})
+        net_output = self.sess.run(self.net.fc_32, feed_dict={self.net.images: inputs})
         results = []
         for i in range(net_output.shape[0]):
             results.append(self.interpret_output(net_output[i]))
@@ -133,27 +131,32 @@ class Detector(object):
             intersection = tb * lr
         return intersection / (box1[2] * box1[3] + box2[2] * box2[3] - intersection)
 
-    def camera_detector(self, cap):
+    def camera_detector(self, cap, wait=10):
         detect_timer = Timer()
         ret, _ = cap.read()
 
         while ret:
-            ret, frame = cap.read()
+
             detect_timer.tic()
             result = self.detect(frame)
             detect_timer.toc()
+            print 'Average detecting time: {:.3f}s'.format(detect_timer.average_time)
+
             self.draw_result(frame, result)
             cv2.imshow('Camera', frame)
-            cv2.waitKey(10)
-            print 'Average detecting time: {:.3f}s'.format(detect_timer.average_time)
+            cv2.waitKey(wait)
+
+            ret, frame = cap.read()
 
     def image_detector(self, imname, wait=0):
         detect_timer = Timer()
         image = cv2.imread(imname)
+
         detect_timer.tic()
         result = self.detect(image)
         detect_timer.toc()
         print 'Average detecting time: {:.3f}s'.format(detect_timer.average_time)
+
         self.draw_result(image, result)
         cv2.imshow('Image', image)
         cv2.waitKey(wait)
@@ -161,14 +164,16 @@ class Detector(object):
 
 def main():
     os.environ['CUDA_VISIBLE_DEVICES'] = cfg.GPU
-    
+
     yolo = YOLONet('test')
     weight_file = 'data/weights/YOLO_small.ckpt'
     detector = Detector(yolo, weight_file)
 
+    # detect from camera
     cap = cv2.VideoCapture(-1)
     detector.camera_detector(cap)
 
+    # detect from image file
     imname = 'test/person.jpg'
     detector.image_detector(imname)
 

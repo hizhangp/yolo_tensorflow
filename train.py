@@ -56,7 +56,7 @@ class Solver(object):
             load_timer.tic()
             images, labels = self.data.get()
             load_timer.toc()
-            feed_dict = {self.net.x: images, self.net.labels: labels, self.learning_rate: learning_rate}
+            feed_dict = {self.net.images: images, self.net.labels: labels, self.learning_rate: learning_rate}
             if step % self.display_iter == 0:
                 # get summary
                 train_timer.tic()
