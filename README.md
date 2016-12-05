@@ -4,7 +4,7 @@ Tensorflow implementation of [YOLO](https://arxiv.org/pdf/1506.02640.pdf), inclu
 
 ### Installation
 
-1. Clone YOLO_tensorflow repository
+1. Clone yolo_tensorflow repository
 	```Shell
 	git clone https://github.com/hizhangp/yolo_tensorflow.git
   cd yolo_tensorflow

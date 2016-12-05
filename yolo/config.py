@@ -6,26 +6,22 @@ import os
 
 DATA_PATH = 'data'
 
-# traning data
 PASCAL_PATH = os.path.join(DATA_PATH, 'pascal_voc')
 
-# label cache
 CACHE_PATH = os.path.join(DATA_PATH, 'cache')
 
-# output directory
 OUTPUT_DIR = os.path.join(DATA_PATH, 'output')
 
-# weight file directory
 WEIGHTS_DIR = os.path.join(DATA_PATH, 'weights')
 
 WEIGHTS_FILE = None
+# WEIGHTS_FILE = os.path.join(DATA_PATH, 'weights', 'YOLO_small.ckpt')
 
 CLASSES = ['aeroplane', 'bicycle', 'bird', 'boat', 'bottle', 'bus',
-            'car', 'cat', 'chair', 'cow', 'diningtable', 'dog', 'horse',
-            'motorbike', 'person', 'pottedplant', 'sheep', 'sofa',
-            'train', 'tvmonitor']
+           'car', 'cat', 'chair', 'cow', 'diningtable', 'dog', 'horse',
+           'motorbike', 'person', 'pottedplant', 'sheep', 'sofa',
+           'train', 'tvmonitor']
 
-# flip image before training
 FLIPPED = True
 
 
@@ -33,22 +29,19 @@ FLIPPED = True
 # model parameter
 #
 
-# fix image size (IMAGE_SIZE x IMAGE_SIZE)
 IMAGE_SIZE = 448
 
 CELL_SIZE = 7
 
 BOXES_PER_CELL = 2
 
-# leaky ReLU
 ALPHA = 0.1
 
 DISP_CONSOLE = False
 
-# weight of loss
 OBJECT_SCALE = 1.0
-NOOBJECT_SCALE = 0.5
-CLASS_SCALE = 1.0
+NOOBJECT_SCALE = 1.0
+CLASS_SCALE = 2.0
 COORD_SCALE = 5.0
 
 
@@ -58,16 +51,19 @@ COORD_SCALE = 5.0
 
 GPU = ''
 
-BATCH_SIZE = 32
-
 LEARNING_RATE = 0.0001
 
-# step size to change learning rate
-STEP_SIZE = 4000
+DECAY_STEPS = 30000
 
-MAX_ITER = 20000
+DECAY_RATE = 0.1
 
-DISPLAY_ITER = 20
+STAIRCASE = True
+
+BATCH_SIZE = 45
+
+MAX_ITER = 15000
+
+SUMMARY_ITER = 10
 
 SAVE_ITER = 1000
 
@@ -76,7 +72,6 @@ SAVE_ITER = 1000
 # test parameter
 #
 
-# threshold for objectness
 THRESHOLD = 0.2
 
 IOU_THRESHOLD = 0.5

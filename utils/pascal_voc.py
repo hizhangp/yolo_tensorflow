@@ -4,7 +4,6 @@ import numpy as np
 import cv2
 import cPickle
 import copy
-from multiprocessing import Process, Queue
 import yolo.config as cfg
 
 
@@ -22,7 +21,7 @@ class pascal_voc(object):
         self.phase = phase
         self.rebuild = rebuild
         self.cursor = 0
-        self.epoch = 0
+        self.epoch = 1
         self.gt_labels = None
         self.prepare()
 
@@ -41,7 +40,6 @@ class pascal_voc(object):
                 np.random.shuffle(self.gt_labels)
                 self.cursor = 0
                 self.epoch += 1
-                print 'Epoch: {:d}'.format(self.epoch)
         return images, labels
 
     def image_read(self, imname, flipped=False):

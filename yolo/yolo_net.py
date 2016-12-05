@@ -6,18 +6,19 @@ import yolo.config as cfg
 class YOLONet(object):
 
     def __init__(self, phase):
-        self.phase = phase
-
         self.weights_file = cfg.WEIGHTS_FILE
+
         self.classes = cfg.CLASSES
-        self.num_classes = len(self.classes)
+        self.num_class = len(self.classes)
         self.image_size = cfg.IMAGE_SIZE
         self.cell_size = cfg.CELL_SIZE
         self.boxes_per_cell = cfg.BOXES_PER_CELL
-        self.output_size = (self.cell_size * self.cell_size) * (self.num_classes + self.boxes_per_cell * 5)
+        self.output_size = (self.cell_size * self.cell_size) * \
+            (self.num_class + self.boxes_per_cell * 5)
         self.scale = 1.0 * self.image_size / self.cell_size
-        self.boundary1 = self.cell_size * self.cell_size * self.num_classes
-        self.boundary2 = self.boundary1 + self.cell_size * self.cell_size * self.boxes_per_cell
+        self.boundary1 = self.cell_size * self.cell_size * self.num_class
+        self.boundary2 = self.boundary1 + self.cell_size * \
+            self.cell_size * self.boxes_per_cell
 
         self.object_scale = cfg.OBJECT_SCALE
         self.noobject_scale = cfg.NOOBJECT_SCALE
@@ -28,28 +29,21 @@ class YOLONet(object):
         self.batch_size = cfg.BATCH_SIZE
         self.alpha = cfg.ALPHA
         self.disp_console = cfg.DISP_CONSOLE
-        # collection for restoring and saving weight file
+        self.phase = phase
         self.collection = []
-        self.offset = np.transpose(np.reshape(np.array([np.arange(self.cell_size)] * self.cell_size * self.boxes_per_cell), (self.boxes_per_cell, self.cell_size, self.cell_size)), (1, 2, 0))
+        self.offset = np.transpose(np.reshape(np.array(
+            [np.arange(self.cell_size)] * self.cell_size * self.boxes_per_cell),
+            (self.boxes_per_cell, self.cell_size, self.cell_size)), (1, 2, 0))
 
-        # build yolo network
         self.build_networks()
 
+        # self.global_step = tf.Variable(0, trainable=False)
 
     def build_networks(self):
-        '''Build yolo network
-
-        Args:
-            images: 4-D tensor [batch_size, image_size, image_size, channels]
-            labels(train): 4-D tensor [batch_size, image_size, image_size, num_classes + 5]
-        Returns:
-            loss(train): 1-D tensor [class_loss + object_loss + noobject_loss + coord_loss]
-            fc_32(test): [batch_size， cell_size * cell_size * (num_classes + boxes_per_cell * 5)]
-        '''
         if self.disp_console:
             print "Building YOLO_small graph..."
-        self.images = tf.placeholder('float32', [None, 448, 448, 3])
-        self.conv_1 = self.conv_layer(1, self.images, 64, 7, 2)
+        self.x = tf.placeholder('float32', [None, 448, 448, 3])
+        self.conv_1 = self.conv_layer(1, self.x, 64, 7, 2)
         self.pool_2 = self.pooling_layer(2, self.conv_1, 2, 2)
         self.conv_3 = self.conv_layer(3, self.pool_2, 192, 3, 1)
         self.pool_4 = self.pooling_layer(4, self.conv_3, 2, 2)
@@ -85,7 +79,8 @@ class YOLONet(object):
             self.dropout_31 = tf.nn.dropout(self.fc_30, keep_prob=0.5)
             self.fc_32 = self.fc_layer(
                 32, self.dropout_31, self.output_size, flat=False, linear=True)
-            self.labels = tf.placeholder('float32', [None, self.cell_size, self.cell_size, 5 + self.num_classes])
+            self.labels = tf.placeholder(
+                'float32', [None, self.cell_size, self.cell_size, 5 + self.num_class])
             self.loss = self.loss_layer(33, self.fc_32, self.labels)
             tf.scalar_summary(self.phase + '/total_loss', self.loss)
         else:
@@ -142,25 +137,27 @@ class YOLONet(object):
         ip = tf.add(tf.matmul(inputs_processed, weight), biases)
         return tf.maximum(self.alpha * ip, ip, name=str(idx) + '_fc')
 
-
     def calc_iou(self, boxes1, boxes2):
-        '''Calculate iou
-
+        """calculate ious
         Args:
-            boxes1: 5-D tensor [batch_size, cell_size, cell_size, boxes_per_cell, 4]  ====> (x_center, y_center, w, h)
-            boxes2: 5-D tensor [batch_size, cell_size, cell_size, boxes_per_cell, 4]
+          boxes1: 4-D tensor [CELL_SIZE, CELL_SIZE, BOXES_PER_CELL, 4]  ====> (x_center, y_center, w, h)
+          boxes2: 1-D tensor [CELL_SIZE, CELL_SIZE, BOXES_PER_CELL, 4] ===> (x_center, y_center, w, h)
         Return:
-            iou: 4-D tensor [batch_size, cell_size, cell_size, boxes_per_cell]
-        '''
-        boxes1 = tf.pack([boxes1[:, :, :, :, 0] - boxes1[:, :, :, :, 2] / 2, boxes1[:, :, :, :, 1] - boxes1[:, :, :, :, 3] / 2,
-                      boxes1[:, :, :, :, 0] + boxes1[:, :, :, :, 2] / 2, boxes1[:, :, :, :, 1] + boxes1[:, :, :, :, 3] / 2])
+          iou: 3-D tensor [CELL_SIZE, CELL_SIZE, BOXES_PER_CELL]
+        """
+        boxes1 = tf.pack([boxes1[:, :, :, :, 0] - boxes1[:, :, :, :, 2] / 2.0,
+                          boxes1[:, :, :, :, 1] - boxes1[:, :, :, :, 3] / 2.0,
+                          boxes1[:, :, :, :, 0] + boxes1[:, :, :, :, 2] / 2.0,
+                          boxes1[:, :, :, :, 1] + boxes1[:, :, :, :, 3] / 2.0])
         boxes1 = tf.transpose(boxes1, [1, 2, 3, 4, 0])
 
-        boxes2 = tf.pack([boxes2[:, :, :, :, 0] - boxes2[:, :, :, :, 2] / 2, boxes2[:, :, :, :, 1] - boxes2[:, :, :, :, 3] / 2,
-                        boxes2[:, :, :, :, 0] + boxes2[:, :, :, :, 2] / 2, boxes2[:, :, :, :, 1] + boxes2[:, :, :, :, 3] / 2])
+        boxes2 = tf.pack([boxes2[:, :, :, :, 0] - boxes2[:, :, :, :, 2] / 2.0,
+                          boxes2[:, :, :, :, 1] - boxes2[:, :, :, :, 3] / 2.0,
+                          boxes2[:, :, :, :, 0] + boxes2[:, :, :, :, 2] / 2.0,
+                          boxes2[:, :, :, :, 1] + boxes2[:, :, :, :, 3] / 2])
         boxes2 = tf.transpose(boxes2, [1, 2, 3, 4, 0])
 
-        # calculate the left up point
+        # calculate the left up point & right down point
         lu = tf.maximum(boxes1[:, :, :, :, :2], boxes2[:, :, :, :, :2])
         rd = tf.minimum(boxes1[:, :, :, :, 2:], boxes2[:, :, :, :, 2:])
 
@@ -169,30 +166,34 @@ class YOLONet(object):
         inter_square = intersection[:, :, :, :, 0] * intersection[:, :, :, :, 1]
 
         # calculate the boxs1 square and boxs2 square
-        square1 = (boxes1[:, :, :, :, 2] - boxes1[:, :, :, :, 0]) * (boxes1[:, :, :, :, 3] - boxes1[:, :, :, :, 1])
-        square2 = (boxes2[:, :, :, :, 2] - boxes2[:, :, :, :, 0]) * (boxes2[:, :, :, :, 3] - boxes2[:, :, :, :, 1])
+        square1 = (boxes1[:, :, :, :, 2] - boxes1[:, :, :, :, 0]) * \
+            (boxes1[:, :, :, :, 3] - boxes1[:, :, :, :, 1])
+        square2 = (boxes2[:, :, :, :, 2] - boxes2[:, :, :, :, 0]) * \
+            (boxes2[:, :, :, :, 3] - boxes2[:, :, :, :, 1])
 
-        # union
         union_square = tf.maximum(square1 + square2 - inter_square, 1e-10)
 
-        return tf.clip_by_value(inter_square / union_square, 1e-10, 1.0)
+        return tf.clip_by_value(inter_square / union_square, 0.0, 1.0)
 
     def loss_layer(self, idx, predicts, labels):
 
-        # slice and reshape predicted data
-        predict_classes = tf.reshape(predicts[:, :self.boundary1], (self.batch_size, self.cell_size, self.cell_size, self.num_classes))
-        predict_scales = tf.reshape(predicts[:, self.boundary1:self.boundary2], (self.batch_size, self.cell_size, self.cell_size, self.boxes_per_cell))
-        predict_boxes = tf.reshape(predicts[:, self.boundary2:], (self.batch_size, self.cell_size, self.cell_size, self.boxes_per_cell, 4))
+        predict_classes = tf.reshape(predicts[:, :self.boundary1],
+            [self.batch_size, self.cell_size, self.cell_size, self.num_class])
+        predict_scales = tf.reshape(predicts[:, self.boundary1:self.boundary2],
+            [self.batch_size, self.cell_size, self.cell_size, self.boxes_per_cell])
+        predict_boxes = tf.reshape(predicts[:, self.boundary2:],
+            [self.batch_size, self.cell_size, self.cell_size, self.boxes_per_cell, 4])
 
-        # slice and reshape input labels
-        response = tf.reshape(labels[:, :, :, 0], [self.batch_size, self.cell_size, self.cell_size, 1])
-        boxes = tf.reshape(labels[:, :, :, 1:5], [self.batch_size, self.cell_size, self.cell_size, 1, 4])
+        response = tf.reshape(labels[:, :, :, 0],
+            [self.batch_size, self.cell_size, self.cell_size, 1])
+        boxes = tf.reshape(labels[:, :, :, 1:5],
+            [self.batch_size, self.cell_size, self.cell_size, 1, 4])
         boxes = tf.tile(boxes, [1, 1, 1, self.boxes_per_cell, 1]) / self.image_size
         classes = labels[:, :, :, 5:]
 
-        # transform predicted boxes to boxes format
         offset = tf.constant(self.offset, dtype=tf.float32)
-        offset = tf.reshape(offset, [1, self.cell_size, self.cell_size, self.boxes_per_cell])
+        offset = tf.reshape(offset,
+            [1, self.cell_size, self.cell_size, self.boxes_per_cell])
         offset = tf.tile(offset, [self.batch_size, 1, 1, 1])
         predict_boxes_tran = tf.pack([(predict_boxes[:, :, :, :, 0] + offset) / self.cell_size,
                                       (predict_boxes[:, :, :, :, 1] + tf.transpose(offset, (0, 2, 1, 3))) / self.cell_size,
@@ -200,17 +201,16 @@ class YOLONet(object):
                                       tf.square(predict_boxes[:, :, :, :, 3])])
         predict_boxes_tran = tf.transpose(predict_boxes_tran, [1, 2, 3, 4, 0])
 
-        # calculate iou
         iou_predict_truth = self.calc_iou(predict_boxes_tran, boxes)
 
-        # object coordinate mask
+        # calculate I tensor [BATCH_SIZE, CELL_SIZE, CELL_SIZE, BOXES_PER_CELL]
         object_mask = tf.reduce_max(iou_predict_truth, 3, keep_dims=True)
         object_mask = tf.cast((iou_predict_truth >= object_mask), tf.float32) * response
+        # mask = tf.tile(response, [1, 1, 1, self.boxes_per_cell])
 
-        # noobject coordinate mask
+        # calculate no_I tensor [CELL_SIZE, CELL_SIZE, BOXES_PER_CELL]
         noobject_mask = tf.ones_like(object_mask, dtype=tf.float32) - object_mask
 
-        # transform boxes to predicted boxes format
         boxes_tran = tf.pack([boxes[:, :, :, :, 0] * self.cell_size - offset,
                               boxes[:, :, :, :, 1] * self.cell_size - tf.transpose(offset, (0, 2, 1, 3)),
                               tf.sqrt(boxes[:, :, :, :, 2]),
@@ -219,38 +219,31 @@ class YOLONet(object):
 
         # class_loss
         class_loss = tf.reduce_mean(tf.reduce_sum(tf.square(response * (predict_classes - classes)),
-                                                  reduction_indices=[1, 2, 3]), name='class_loss') * self.class_scale
+            reduction_indices=[1, 2, 3]), name='class_loss') * self.class_scale
 
         # object_loss
         object_loss = tf.reduce_mean(tf.reduce_sum(tf.square(object_mask * (predict_scales - iou_predict_truth)),
-                                                   reduction_indices=[1, 2, 3]), name='object_loss') * self.object_scale
+            reduction_indices=[1, 2, 3]), name='object_loss') * self.object_scale
 
         # noobject_loss
-        noobject_loss = tf.reduce_mean(
-            tf.reduce_sum(tf.square(noobject_mask * predict_scales), reduction_indices=[1, 2, 3]), name='noobject_loss') * self.noobject_scale
+        noobject_loss = tf.reduce_mean(tf.reduce_sum(tf.square(noobject_mask * predict_scales),
+            reduction_indices=[1, 2, 3]), name='noobject_loss') * self.noobject_scale
 
         # coord_loss
-        coord_mask = tf.reshape(object_mask, [self.batch_size, self.cell_size, self.cell_size, self.boxes_per_cell, 1])
+        coord_mask = tf.expand_dims(object_mask, 4)
         boxes_delta = coord_mask * (predict_boxes - boxes_tran)
-        coord_loss = tf.reduce_mean(
-            tf.reduce_sum(tf.square(boxes_delta), reduction_indices=[1, 2, 3, 4]), name='coord_loss') * self.coord_scale
+        coord_loss = tf.reduce_mean(tf.reduce_sum(tf.square(boxes_delta),
+            reduction_indices=[1, 2, 3, 4]), name='coord_loss') * self.coord_scale
 
-        # iou loss
-        iou_loss = tf.reduce_mean(
-            tf.reduce_sum(tf.square(object_mask * iou_predict_truth), reduction_indices=[1, 2, 3]),
-            name='iou_loss')
+        tf.summary.scalar(self.phase + '/class_loss', class_loss)
+        tf.summary.scalar(self.phase + '/object_loss', object_loss)
+        tf.summary.scalar(self.phase + '/noobject_loss', noobject_loss)
+        tf.summary.scalar(self.phase + '/coord_loss', coord_loss)
 
-        # tensorboard summary
-        tf.scalar_summary(self.phase + '/class_loss', class_loss)
-        tf.scalar_summary(self.phase + '/object_loss', object_loss)
-        tf.scalar_summary(self.phase + '/noobject_loss', noobject_loss)
-        tf.scalar_summary(self.phase + '/coord_loss', coord_loss)
-        tf.scalar_summary(self.phase + '/iou_loss', iou_loss)
-
-        tf.histogram_summary(self.phase + '/boxes_delta_x', boxes_delta[:, :, :, :, 0])
-        tf.histogram_summary(self.phase + '/boxes_delta_y', boxes_delta[:, :, :, :, 1])
-        tf.histogram_summary(self.phase + '/boxes_delta_w', boxes_delta[:, :, :, :, 2])
-        tf.histogram_summary(self.phase + '/boxes_delta_h', boxes_delta[:, :, :, :, 3])
-        tf.histogram_summary(self.phase + '/iou', iou_predict_truth)
+        tf.summary.histogram(self.phase + '/boxes_delta_x', boxes_delta[:, :, :, :, 0])
+        tf.summary.histogram(self.phase + '/boxes_delta_y', boxes_delta[:, :, :, :, 1])
+        tf.summary.histogram(self.phase + '/boxes_delta_w', boxes_delta[:, :, :, :, 2])
+        tf.summary.histogram(self.phase + '/boxes_delta_h', boxes_delta[:, :, :, :, 3])
+        tf.summary.histogram(self.phase + '/iou', iou_predict_truth)
 
         return class_loss + object_loss + noobject_loss + coord_loss

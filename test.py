@@ -1,6 +1,5 @@
 import tensorflow as tf
 import numpy as np
-import datetime
 import os
 import cv2
 import yolo.config as cfg
@@ -26,7 +25,7 @@ class Detector(object):
         self.boundary2 = self.boundary1 + self.cell_size * self.cell_size * self.boxes_per_cell
 
         self.sess = tf.Session()
-        self.sess.run(tf.initialize_all_variables())
+        self.sess.run(tf.global_variables_initializer())
 
         print 'Restoring weights from: ' + self.weights_file
         self.saver = tf.train.Saver()
