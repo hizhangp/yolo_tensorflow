@@ -60,7 +60,7 @@ class Detector(object):
         return result
 
     def detect_from_cvmat(self, inputs):
-        net_output = self.sess.run(self.net.fc_32, feed_dict={self.net.images: inputs})
+        net_output = self.sess.run(self.net.fc_32, feed_dict={self.net.x: inputs})
         results = []
         for i in range(net_output.shape[0]):
             results.append(self.interpret_output(net_output[i]))
@@ -135,7 +135,7 @@ class Detector(object):
         ret, _ = cap.read()
 
         while ret:
-
+            ret, frame = cap.read()
             detect_timer.tic()
             result = self.detect(frame)
             detect_timer.toc()
