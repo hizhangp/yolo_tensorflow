@@ -6,13 +6,13 @@ Tensorflow implementation of [YOLO](https://arxiv.org/pdf/1506.02640.pdf), inclu
 
 1. Clone yolo_tensorflow repository
 	```Shell
-	git clone https://github.com/hizhangp/yolo_tensorflow.git
-  cd yolo_tensorflow
+	$ git clone https://github.com/hizhangp/yolo_tensorflow.git
+    $ cd yolo_tensorflow
 	```
 
-2. Download Pascal VOC dataset, we call the directory `PASCAL_VOC`
+2. Download Pascal VOC dataset, and create correct directories
 	```Shell
-	ln -s $PASCAL_VOC$ data/pascal_voc
+	$ ./download_data.sh
 	```
 
 3. Download [YOLO_small](https://drive.google.com/file/d/0B2JbaJSrWLpza08yS2FSUnV2dlE/view?usp=sharing)
@@ -22,12 +22,12 @@ weight file and put it in `data/weight`
 
 5. Training
 	```Shell
-	python train.py
+	$ python train.py
 	```
 
 6. Test
 	```Shell
-	python test.py
+	$ python test.py
 	```
 
 ### Requirements
