@@ -36,7 +36,7 @@ class Solver(object):
         # self.optimizer = tf.train.AdamOptimizer(learning_rate=self.learning_rate).minimize(self.net.loss, global_step=self.global_step)
         self.optimizer = tf.train.GradientDescentOptimizer(
             learning_rate=self.learning_rate).minimize(
-            self.net.total_loss, global_step=self.global_step)
+            self.net.loss, global_step=self.global_step)
         self.ema = tf.train.ExponentialMovingAverage(decay=0.9999)
         self.averages_op = self.ema.apply(tf.trainable_variables())
         with tf.control_dependencies([self.optimizer]):
@@ -47,7 +47,11 @@ class Solver(object):
         self.writer = tf.summary.FileWriter(self.output_dir, flush_secs=60)
         self.ckpt_file = os.path.join(self.output_dir, 'save.ckpt')
 
-        self.sess = tf.Session()
+        os.environ['CUDA_VISIBLE_DEVICES'] = cfg.GPU
+
+        gpu_options = tf.GPUOptions()
+        config = tf.ConfigProto(gpu_options=gpu_options)
+        self.sess = tf.Session(config=config)
         self.sess.run(tf.global_variables_initializer())
 
         if self.weights_file is not None:
@@ -129,26 +133,17 @@ class Solver(object):
 def main():
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--weights', default=None, type=str)
+    parser.add_argument('--weights', default="YOLO_small.ckpt", type=str)
     parser.add_argument('--gpu', default=None, type=int)
     args = parser.parse_args()
 
-    if args.weights is not None:
-        cfg.WEIGHTS_FILE = os.path.join(cfg.WEIGHTS_DIR, args.weights)
+    cfg.WEIGHTS_FILE = os.path.join(cfg.WEIGHTS_DIR, args.weights)
     if args.gpu is not None:
         cfg.GPU = str(args.gpu)
 
-    cfg.GPU = '1'
-    cfg.WEIGHTS_FILE = os.path.join(cfg.WEIGHTS_DIR, 'YOLO_small.ckpt')
-    # cfg.DISPLAY_ITER = 1
-
-    os.environ['CUDA_VISIBLE_DEVICES'] = cfg.GPU
-
     yolo = YOLONet('train')
     pascal = pascal_voc('train')
-
     solver = Solver(yolo, pascal)
-
     solver.train()
 
 if __name__ == '__main__':
