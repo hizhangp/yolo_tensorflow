@@ -1,10 +1,15 @@
 echo "Creating data directory..."
 mkdir -p data && cd data
+mkdir weights
+mkdir pascal_voc
+mkdir cache
 
 echo "Downloading Pascal VOC 2012 data..."
-wget http://pjreddie.com/media/files/VOCtrainval_11-May-2012.tar
+wget http://pjreddie.com/media/files/VOCtrainval_06-Nov-2007.tar
 
 echo "Extracting VOC data..."
-tar xf VOCtrainval_11-May-2012.tar
+tar xf VOCtrainval_06-Nov-2007.tar
+
+mv VOCdevkit pascal_voc/.
 
 echo "Done."
