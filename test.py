@@ -2,6 +2,7 @@ import tensorflow as tf
 import numpy as np
 import os
 import cv2
+import argparse
 import yolo.config as cfg
 from yolo.yolo_net import YOLONet
 from utils.timer import Timer
@@ -162,10 +163,17 @@ class Detector(object):
 
 
 def main():
-    os.environ['CUDA_VISIBLE_DEVICES'] = cfg.GPU
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--weights', default="YOLO_small.ckpt", type=str)
+    parser.add_argument('--weight_dir', default='pascal_voc/weights', type=str)
+    parser.add_argument('--data_dir', default="data", type=str)
+    parser.add_argument('--gpu', default=None, type=str)
+    args = parser.parse_args()
+    
+    os.environ['CUDA_VISIBLE_DEVICES'] = args.gpu
 
     yolo = YOLONet('test')
-    weight_file = 'data/weights/YOLO_small.ckpt'
+    weight_file = os.path.join(args.data_dir, args.weight_dir, args.weights)
     detector = Detector(yolo, weight_file)
 
     # detect from camera
