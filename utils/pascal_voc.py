@@ -70,12 +70,16 @@ class pascal_voc(object):
 
     def load_labels(self):
         cache_file = os.path.join(self.cache_path, 'pascal_' + self.phase + '_gt_labels.pkl')
-        if os.path.exists(cache_file) and not self.rebuild:
+
+        if os.path.isfile(cache_file) and not self.rebuild:
             print 'Loading gt_labels from: ' + cache_file
             with open(cache_file, 'rb') as f:
                 gt_labels = cPickle.load(f)
             return gt_labels
 
+        if not os.path.exists(self.cache_path):
+            os.makedirs(self.cache_path)
+        
         if self.phase == 'train':
             txtname = os.path.join(self.data_path, 'ImageSets', 'Main',
                                     'trainval.txt')

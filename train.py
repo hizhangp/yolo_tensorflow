@@ -129,17 +129,29 @@ class Solver(object):
                     cfg_str = '{}: {}\n'.format(key, cfg_dict[key])
                     f.write(cfg_str)
 
+def update_config_paths(data_dir, weights_file):
+    cfg.DATA_PATH = data_dir
+    cfg.PASCAL_PATH = os.path.join(data_dir, 'pascal_voc')
+    cfg.CACHE_PATH = os.path.join(cfg.PASCAL_PATH, 'cache')
+    cfg.OUTPUT_DIR = os.path.join(cfg.PASCAL_PATH, 'output')
+    cfg.WEIGHTS_DIR = os.path.join(cfg.PASCAL_PATH, 'weights')
+
+    cfg.WEIGHTS_FILE = os.path.join(cfg.WEIGHTS_DIR, weights_file)
 
 def main():
-
     parser = argparse.ArgumentParser()
     parser.add_argument('--weights', default="YOLO_small.ckpt", type=str)
-    parser.add_argument('--gpu', default=None, type=int)
+    parser.add_argument('--data_dir', default="data", type=str)
+    parser.add_argument('--threshold', default=0.2, type=float)
+    parser.add_argument('--iou_threshold', default=0.5, type=float)
+    parser.add_argument('--gpu', default=None, type=str)
     args = parser.parse_args()
-
-    cfg.WEIGHTS_FILE = os.path.join(cfg.WEIGHTS_DIR, args.weights)
+    
     if args.gpu is not None:
-        cfg.GPU = str(args.gpu)
+        cfg.GPU = args.gpu
+    
+    if args.data_dir != cfg.DATA_PATH:
+        update_config_paths(args.data_dir, args.weights)
 
     yolo = YOLONet('train')
     pascal = pascal_voc('train')
