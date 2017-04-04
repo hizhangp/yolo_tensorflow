@@ -54,7 +54,7 @@ class pascal_voc(object):
     def prepare(self):
         gt_labels = self.load_labels()
         if self.flipped:
-            print 'Appending horizontally-flipped training examples ...'
+            print('Appending horizontally-flipped training examples ...')
             gt_labels_cp = copy.deepcopy(gt_labels)
             for idx in range(len(gt_labels_cp)):
                 gt_labels_cp[idx]['flipped'] = True
@@ -72,20 +72,22 @@ class pascal_voc(object):
         cache_file = os.path.join(self.cache_path, 'pascal_' + self.phase + '_gt_labels.pkl')
 
         if os.path.isfile(cache_file) and not self.rebuild:
-            print 'Loading gt_labels from: ' + cache_file
+            print('Loading gt_labels from: ' + cache_file)
             with open(cache_file, 'rb') as f:
                 gt_labels = cPickle.load(f)
             return gt_labels
 
+        print('Processing gt_labels from: ' + self.data_path)
+
         if not os.path.exists(self.cache_path):
             os.makedirs(self.cache_path)
-        
+
         if self.phase == 'train':
             txtname = os.path.join(self.data_path, 'ImageSets', 'Main',
-                                    'trainval.txt')
+                                   'trainval.txt')
         else:
             txtname = os.path.join(self.data_path, 'ImageSets', 'Main',
-                                    'test.txt')
+                                   'test.txt')
         with open(txtname, 'r') as f:
             self.image_index = [x.strip() for x in f.readlines()]
 
@@ -96,7 +98,7 @@ class pascal_voc(object):
                 continue
             imname = os.path.join(self.data_path, 'JPEGImages', index + '.jpg')
             gt_labels.append({'imname': imname, 'label': label, 'flipped': False})
-        print 'Saving gt_labels to: ' + cache_file
+        print('Saving gt_labels to: ' + cache_file)
         with open(cache_file, 'wb') as f:
             cPickle.dump(gt_labels, f)
         return gt_labels
@@ -126,7 +128,7 @@ class pascal_voc(object):
             x2 = max(min((float(bbox.find('xmax').text) - 1) * w_ratio, self.image_size - 1), 0)
             y2 = max(min((float(bbox.find('ymax').text) - 1) * h_ratio, self.image_size - 1), 0)
             cls_ind = self.class_to_ind[obj.find('name').text.lower().strip()]
-            boxes = [(x2 + x1) / 2, (y2 + y1) / 2, x2 - x1, y2 - y1]
+            boxes = [(x2 + x1) / 2.0, (y2 + y1) / 2.0, x2 - x1, y2 - y1]
             x_ind = int(boxes[0] * self.cell_size / self.image_size)
             y_ind = int(boxes[1] * self.cell_size / self.image_size)
             if label[y_ind, x_ind, 0] == 1:
