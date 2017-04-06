@@ -74,7 +74,7 @@ class Solver(object):
 
                     train_timer.tic()
                     summary_str, loss, _ = self.sess.run(
-                        [self.summary_op, self.net.loss, self.train_op],
+                        [self.summary_op, self.net.total_loss, self.train_op],
                         feed_dict=feed_dict)
                     train_timer.toc()
 
