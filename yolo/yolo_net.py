@@ -37,7 +37,7 @@ class YOLONet(object):
         if is_training:
             self.labels = tf.placeholder(tf.float32, [None, self.cell_size, self.cell_size, 5 + self.num_class])
             self.loss_layer(self.logits, self.labels)
-            self.total_loss = slim.losses.get_total_loss()
+            self.total_loss = tf.losses.get_total_loss()
             tf.summary.scalar('total_loss', self.total_loss)
 
     def build_network(self,
@@ -183,10 +183,10 @@ class YOLONet(object):
             boxes_delta = coord_mask * (predict_boxes - boxes_tran)
             coord_loss = tf.reduce_mean(tf.reduce_sum(tf.square(boxes_delta), axis=[1, 2, 3, 4]), name='coord_loss') * self.coord_scale
 
-            slim.losses.add_loss(class_loss)
-            slim.losses.add_loss(object_loss)
-            slim.losses.add_loss(noobject_loss)
-            slim.losses.add_loss(coord_loss)
+            tf.losses.add_loss(class_loss)
+            tf.losses.add_loss(object_loss)
+            tf.losses.add_loss(noobject_loss)
+            tf.losses.add_loss(coord_loss)
 
             tf.summary.scalar('class_loss', class_loss)
             tf.summary.scalar('object_loss', object_loss)
