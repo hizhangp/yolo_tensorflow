@@ -107,8 +107,8 @@ class Solver(object):
 
             if step % self.save_iter == 0:
                 print('{} Saving checkpoint file to: {}'.format(
-                    datetime.datetime.now().strftime('%m/%d %H:%M:%S')),
-                    self.output_dir)
+                    datetime.datetime.now().strftime('%m/%d %H:%M:%S'),
+                    self.output_dir))
                 self.saver.save(self.sess, self.ckpt_file,
                                 global_step=self.global_step)
 
