@@ -147,8 +147,8 @@ class YOLONet(object):
             offset = tf.tile(offset, [self.batch_size, 1, 1, 1])
             predict_boxes_tran = tf.stack([(predict_boxes[:, :, :, :, 0] + offset) / self.cell_size,
                                            (predict_boxes[:, :, :, :, 1] + tf.transpose(offset, (0, 2, 1, 3))) / self.cell_size,
-                                           tf.square(predict_boxes[:, :, :, :, 2]),
-                                           tf.square(predict_boxes[:, :, :, :, 3])])
+                                           tf.sqrt(predict_boxes[:, :, :, :, 2]),
+                                           tf.sqrt(predict_boxes[:, :, :, :, 3])])
             predict_boxes_tran = tf.transpose(predict_boxes_tran, [1, 2, 3, 4, 0])
 
             iou_predict_truth = self.calc_iou(predict_boxes_tran, boxes)
