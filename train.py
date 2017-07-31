@@ -28,6 +28,7 @@ class Solver(object):
         self.save_cfg()
 
         self.variable_to_restore = tf.global_variables()
+        self.restorer = tf.train.Saver(self.variable_to_restore, max_to_keep=None)
         self.saver = tf.train.Saver(self.variable_to_restore, max_to_keep=None)
         self.ckpt_file = os.path.join(self.output_dir, 'save.ckpt')
         self.summary_op = tf.summary.merge_all()
@@ -53,7 +54,7 @@ class Solver(object):
 
         if self.weights_file is not None:
             print('Restoring weights from: ' + self.weights_file)
-            self.saver.restore(self.sess, self.weights_file)
+            self.restorer.restore(self.sess, self.weights_file)
 
         self.writer.add_graph(self.sess.graph)
 
