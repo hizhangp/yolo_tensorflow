@@ -1,2 +1,6 @@
 *.pyc
 *.swp
+
+#folder
+*/__pycache__
+data

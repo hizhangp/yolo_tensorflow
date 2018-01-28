@@ -14,8 +14,8 @@ OUTPUT_DIR = os.path.join(PASCAL_PATH, 'output')
 
 WEIGHTS_DIR = os.path.join(PASCAL_PATH, 'weight')
 
-WEIGHTS_FILE = None
-# WEIGHTS_FILE = os.path.join(DATA_PATH, 'weights', 'YOLO_small.ckpt')
+#WEIGHTS_FILE = None
+WEIGHTS_FILE = os.path.join(DATA_PATH, 'weights', 'YOLO_small.ckpt')
 
 CLASSES = ['aeroplane', 'bicycle', 'bird', 'boat', 'bottle', 'bus',
            'car', 'cat', 'chair', 'cow', 'diningtable', 'dog', 'horse',
