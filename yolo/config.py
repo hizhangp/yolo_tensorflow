@@ -14,8 +14,8 @@ OUTPUT_DIR = os.path.join(PASCAL_PATH, 'output')
 
 WEIGHTS_DIR = os.path.join(PASCAL_PATH, 'weight')
 
-WEIGHTS_FILE = None
-# WEIGHTS_FILE = os.path.join(DATA_PATH, 'weights', 'YOLO_small.ckpt')
+#WEIGHTS_FILE = None
+WEIGHTS_FILE = os.path.join(DATA_PATH, 'weights', 'YOLO_small.ckpt')
 
 CLASSES = ['aeroplane', 'bicycle', 'bird', 'boat', 'bottle', 'bus',
            'car', 'cat', 'chair', 'cow', 'diningtable', 'dog', 'horse',
@@ -59,7 +59,7 @@ DECAY_RATE = 0.1
 
 STAIRCASE = True
 
-BATCH_SIZE = 45
+BATCH_SIZE = 4
 
 MAX_ITER = 15000
 
