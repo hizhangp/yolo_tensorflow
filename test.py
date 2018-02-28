@@ -1,8 +1,8 @@
-import tensorflow as tf
-import numpy as np
 import os
 import cv2
 import argparse
+import numpy as np
+import tensorflow as tf
 import yolo.config as cfg
 from yolo.yolo_net import YOLONet
 from utils.timer import Timer
@@ -22,12 +22,13 @@ class Detector(object):
         self.threshold = cfg.THRESHOLD
         self.iou_threshold = cfg.IOU_THRESHOLD
         self.boundary1 = self.cell_size * self.cell_size * self.num_class
-        self.boundary2 = self.boundary1 + self.cell_size * self.cell_size * self.boxes_per_cell
+        self.boundary2 = self.boundary1 +\
+            self.cell_size * self.cell_size * self.boxes_per_cell
 
         self.sess = tf.Session()
         self.sess.run(tf.global_variables_initializer())
 
-        print 'Restoring weights from: ' + self.weights_file
+        print('Restoring weights from: ' + self.weights_file)
         self.saver = tf.train.Saver()
         self.saver.restore(self.sess, self.weights_file)
 
@@ -40,7 +41,11 @@ class Detector(object):
             cv2.rectangle(img, (x - w, y - h), (x + w, y + h), (0, 255, 0), 2)
             cv2.rectangle(img, (x - w, y - h - 20),
                           (x + w, y - h), (125, 125, 125), -1)
-            cv2.putText(img, result[i][0] + ' : %.2f' % result[i][5], (x - w + 5, y - h - 7), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 1, cv2.CV_AA)
+            lineType = cv2.LINE_AA if cv2.__version__ > '3' else cv2.CV_AA
+            cv2.putText(
+                img, result[i][0] + ' : %.2f' % result[i][5],
+                (x - w + 5, y - h - 7), cv2.FONT_HERSHEY_SIMPLEX, 0.5,
+                (0, 0, 0), 1, lineType)
 
     def detect(self, img):
         img_h, img_w, _ = img.shape
@@ -71,11 +76,22 @@ class Detector(object):
     def interpret_output(self, output):
         probs = np.zeros((self.cell_size, self.cell_size,
                           self.boxes_per_cell, self.num_class))
-        class_probs = np.reshape(output[0:self.boundary1], (self.cell_size, self.cell_size, self.num_class))
-        scales = np.reshape(output[self.boundary1:self.boundary2], (self.cell_size, self.cell_size, self.boxes_per_cell))
-        boxes = np.reshape(output[self.boundary2:], (self.cell_size, self.cell_size, self.boxes_per_cell, 4))
-        offset = np.transpose(np.reshape(np.array([np.arange(self.cell_size)] * self.cell_size * self.boxes_per_cell),
-                                         [self.boxes_per_cell, self.cell_size, self.cell_size]), (1, 2, 0))
+        class_probs = np.reshape(
+            output[0:self.boundary1],
+            (self.cell_size, self.cell_size, self.num_class))
+        scales = np.reshape(
+            output[self.boundary1:self.boundary2],
+            (self.cell_size, self.cell_size, self.boxes_per_cell))
+        boxes = np.reshape(
+            output[self.boundary2:],
+            (self.cell_size, self.cell_size, self.boxes_per_cell, 4))
+        offset = np.array(
+            [np.arange(self.cell_size)] * self.cell_size * self.boxes_per_cell)
+        offset = np.transpose(
+            np.reshape(
+                offset,
+                [self.boxes_per_cell, self.cell_size, self.cell_size]),
+            (1, 2, 0))
 
         boxes[:, :, :, 0] += offset
         boxes[:, :, :, 1] += np.transpose(offset, (1, 0, 2))
@@ -94,8 +110,9 @@ class Detector(object):
         boxes_filtered = boxes[filter_mat_boxes[0],
                                filter_mat_boxes[1], filter_mat_boxes[2]]
         probs_filtered = probs[filter_mat_probs]
-        classes_num_filtered = np.argmax(filter_mat_probs, axis=3)[filter_mat_boxes[
-            0], filter_mat_boxes[1], filter_mat_boxes[2]]
+        classes_num_filtered = np.argmax(
+            filter_mat_probs, axis=3)[
+            filter_mat_boxes[0], filter_mat_boxes[1], filter_mat_boxes[2]]
 
         argsort = np.array(np.argsort(probs_filtered))[::-1]
         boxes_filtered = boxes_filtered[argsort]
@@ -116,8 +133,13 @@ class Detector(object):
 
         result = []
         for i in range(len(boxes_filtered)):
-            result.append([self.classes[classes_num_filtered[i]], boxes_filtered[i][0], boxes_filtered[
-                          i][1], boxes_filtered[i][2], boxes_filtered[i][3], probs_filtered[i]])
+            result.append(
+                [self.classes[classes_num_filtered[i]],
+                 boxes_filtered[i][0],
+                 boxes_filtered[i][1],
+                 boxes_filtered[i][2],
+                 boxes_filtered[i][3],
+                 probs_filtered[i]])
 
         return result
 
@@ -126,11 +148,8 @@ class Detector(object):
             max(box1[0] - 0.5 * box1[2], box2[0] - 0.5 * box2[2])
         lr = min(box1[1] + 0.5 * box1[3], box2[1] + 0.5 * box2[3]) - \
             max(box1[1] - 0.5 * box1[3], box2[1] - 0.5 * box2[3])
-        if tb < 0 or lr < 0:
-            intersection = 0
-        else:
-            intersection = tb * lr
-        return intersection / (box1[2] * box1[3] + box2[2] * box2[3] - intersection)
+        inter = 0 if tb < 0 or lr < 0 else tb * lr
+        return inter / (box1[2] * box1[3] + box2[2] * box2[3] - inter)
 
     def camera_detector(self, cap, wait=10):
         detect_timer = Timer()
@@ -141,7 +160,8 @@ class Detector(object):
             detect_timer.tic()
             result = self.detect(frame)
             detect_timer.toc()
-            print('Average detecting time: {:.3f}s'.format(detect_timer.average_time))
+            print('Average detecting time: {:.3f}s'.format(
+                detect_timer.average_time))
 
             self.draw_result(frame, result)
             cv2.imshow('Camera', frame)
@@ -156,7 +176,8 @@ class Detector(object):
         detect_timer.tic()
         result = self.detect(image)
         detect_timer.toc()
-        print('Average detecting time: {:.3f}s'.format(detect_timer.average_time))
+        print('Average detecting time: {:.3f}s'.format(
+            detect_timer.average_time))
 
         self.draw_result(image, result)
         cv2.imshow('Image', image)
