@@ -16,7 +16,7 @@ Tensorflow implementation of [YOLO](https://arxiv.org/pdf/1506.02640.pdf), inclu
 	```
 
 3. Download [YOLO_small](https://drive.google.com/file/d/0B5aC8pI-akZUNVFZMmhmcVRpbTA/view?usp=sharing)
-weight file and put it in `data/weight`
+weight file and put it in `data/weights`
 
 4. Modify configuration in `yolo/config.py`
 
