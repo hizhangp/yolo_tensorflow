@@ -238,8 +238,8 @@ def main():
     detector.image_detector(imname)
     
     # detect from camera
-    cap = cv2.VideoCapture(-1)
-    detector.camera_detector(cap)
+    #cap = cv2.VideoCapture(-1)
+    #detector.camera_detector(cap)
 
 
 if __name__ == '__main__':
