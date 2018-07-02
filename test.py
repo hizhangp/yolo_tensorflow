@@ -119,8 +119,13 @@ class Detector(object):
         probs_filtered = probs[filter_mat_probs]
         
         classes_num_filtered = np.argmax(
-            filter_mat_probs, axis=3)[
+            probs, axis=3)[
             filter_mat_boxes[0], filter_mat_boxes[1], filter_mat_boxes[2]]
+        
+        # Since filter_mat_probs has boolean values, the unexpected results might be occurred. 
+        # classes_num_filtered = np.argmax(
+        #    filter_mat_probs, axis=3)[
+        #    filter_mat_boxes[0], filter_mat_boxes[1], filter_mat_boxes[2]]
 
         argsort = np.array(np.argsort(probs_filtered))[::-1]
         boxes_filtered = boxes_filtered[argsort]
