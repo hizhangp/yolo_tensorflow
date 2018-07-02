@@ -169,7 +169,7 @@ class Detector(object):
         union = box1[2] * box1[3] + box2[2] * box2[3] - inter
         return inter / union
 
-    def draw_result(self, img, result):
+    def display_result(self, img, result):
         for i in range(len(result)):
             x1 = int(result[i][1]) - int(result[i][3] / 2)
             y1 = int(result[i][2]) - int(result[i][4] / 2)
@@ -194,7 +194,7 @@ class Detector(object):
         print('Average detecting time: {:.3f}s'.format(
             detect_timer.average_time))
 
-        self.draw_result(image, result)
+        self.display_result(image, result)
         cv2.imshow('Image', image)
         cv2.waitKey(wait)
 
@@ -210,7 +210,7 @@ class Detector(object):
             print('Average detecting time: {:.3f}s'.format(
                 detect_timer.average_time))
 
-            self.draw_result(frame, result)
+            self.display_result(frame, result)
             cv2.imshow('Camera', frame)
             cv2.waitKey(wait)
 
