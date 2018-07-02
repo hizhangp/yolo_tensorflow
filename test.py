@@ -166,7 +166,8 @@ class Detector(object):
         tb = min(box1[1] + 0.5 * box1[3], box2[1] + 0.5 * box2[3]) - \
             max(box1[1] - 0.5 * box1[3], box2[1] - 0.5 * box2[3])
         inter = 0 if lr < 0 or tb < 0 else lr * tb
-        return inter / (box1[2] * box1[3] + box2[2] * box2[3] - inter)
+        union = box1[2] * box1[3] + box2[2] * box2[3] - inter
+        return inter / union
 
     def draw_result(self, img, result):
         for i in range(len(result)):
@@ -233,12 +234,12 @@ def main():
     detector = Detector(yolo, weight_file)
 
     # detect from image file
-    imname = 'test/person.jpg'
+    imname = 'person.jpg'
     detector.image_detector(imname)
     
     # detect from camera
-    #cap = cv2.VideoCapture(-1)
-    #detector.camera_detector(cap)
+    cap = cv2.VideoCapture(-1)
+    detector.camera_detector(cap)
 
 
 if __name__ == '__main__':
