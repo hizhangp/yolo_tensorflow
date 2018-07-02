@@ -47,10 +47,10 @@ class Detector(object):
         result = self.detect_from_cvmat(inputs)[0]
         
         for i in range(len(result)):
-            result[i][1] *= (1.0 * img_w / self.image_size)
-            result[i][2] *= (1.0 * img_h / self.image_size)
-            result[i][3] *= (1.0 * img_w / self.image_size)
-            result[i][4] *= (1.0 * img_h / self.image_size)
+            result[i][1] *= (img_w / self.image_size)
+            result[i][2] *= (img_h / self.image_size)
+            result[i][3] *= (img_w / self.image_size)
+            result[i][4] *= (img_h / self.image_size)
 
         return result
 
