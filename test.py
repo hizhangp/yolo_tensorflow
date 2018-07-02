@@ -161,11 +161,11 @@ class Detector(object):
         return result
 
     def iou(self, box1, box2):
-        tb = min(box1[0] + 0.5 * box1[2], box2[0] + 0.5 * box2[2]) - \
+        lr = min(box1[0] + 0.5 * box1[2], box2[0] + 0.5 * box2[2]) - \
             max(box1[0] - 0.5 * box1[2], box2[0] - 0.5 * box2[2])
-        lr = min(box1[1] + 0.5 * box1[3], box2[1] + 0.5 * box2[3]) - \
+        tb = min(box1[1] + 0.5 * box1[3], box2[1] + 0.5 * box2[3]) - \
             max(box1[1] - 0.5 * box1[3], box2[1] - 0.5 * box2[3])
-        inter = 0 if tb < 0 or lr < 0 else tb * lr
+        inter = 0 if lr < 0 or tb < 0 else lr * tb
         return inter / (box1[2] * box1[3] + box2[2] * box2[3] - inter)
 
     def draw_result(self, img, result):
