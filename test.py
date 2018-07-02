@@ -170,20 +170,19 @@ class Detector(object):
 
     def draw_result(self, img, result):
         for i in range(len(result)):
-            x = int(result[i][1])
-            y = int(result[i][2])
-            w = int(result[i][3] / 2)
-            h = int(result[i][4] / 2)
-            cv2.rectangle(img, (x - w, y - h), (x + w, y + h), (0, 255, 0), 2)
-            cv2.rectangle(img, (x - w, y - h - 20),
-                          (x + w, y - h), (125, 125, 125), -1)
+            x1 = int(result[i][1]) - int(result[i][3] / 2)
+            y1 = int(result[i][2]) - int(result[i][4] / 2)
+            x2 = int(result[i][1]) + int(result[i][3] / 2)
+            y2 = int(result[i][2]) + int(result[i][4] / 2)
+            cv2.rectangle(img, (x1, y1), (x2, y2), (0, 255, 0), 2)
+            cv2.rectangle(img, (x1, y1 - 20),
+                          (x2, y1), (125, 125, 125), -1)
             lineType = cv2.LINE_AA if cv2.__version__ > '3' else cv2.CV_AA
             cv2.putText(
-                img, result[i][0] + ' : %.2f' % result[i][5],
-                (x - w + 5, y - h - 7), cv2.FONT_HERSHEY_SIMPLEX, 0.5,
+                img, result[i][0] + ' : %.3f' % result[i][5],
+                (x1 + 5, y1 - 6), cv2.FONT_HERSHEY_SIMPLEX, 0.5,
                 (0, 0, 0), 1, lineType)
             
-
     def image_detector(self, imname, wait=0):
         detect_timer = Timer()
         image = cv2.imread(imname)
