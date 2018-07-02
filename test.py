@@ -111,13 +111,13 @@ class Detector(object):
                 probs[:, :, i, j] = np.multiply(
                     class_probs[:, :, j], scales[:, :, i])
 
+        # filtering via class specific confidence score
         filter_mat_probs = np.array(probs >= self.threshold, dtype='bool')
         filter_mat_boxes = np.nonzero(filter_mat_probs)
 
         boxes_filtered = boxes[filter_mat_boxes[0],
                                filter_mat_boxes[1], filter_mat_boxes[2]]
         probs_filtered = probs[filter_mat_probs]
-        
         classes_num_filtered = np.argmax(
             probs, axis=3)[
             filter_mat_boxes[0], filter_mat_boxes[1], filter_mat_boxes[2]]
@@ -126,12 +126,15 @@ class Detector(object):
         # classes_num_filtered = np.argmax(
         #    filter_mat_probs, axis=3)[
         #    filter_mat_boxes[0], filter_mat_boxes[1], filter_mat_boxes[2]]
-
-        argsort = np.array(np.argsort(probs_filtered))[::-1]
+        
+        # non-maximal suppression
+        # step-1: performing descending sort along class specific confidence score 
+        argsort = np.argsort(probs_filtered)[::-1]
         boxes_filtered = boxes_filtered[argsort]
         probs_filtered = probs_filtered[argsort]
         classes_num_filtered = classes_num_filtered[argsort]
 
+        # step-2: filtering via iou
         for i in range(len(boxes_filtered)):
             if probs_filtered[i] == 0:
                 continue
@@ -153,6 +156,7 @@ class Detector(object):
                  boxes_filtered[i][2],
                  boxes_filtered[i][3],
                  probs_filtered[i]])
+            # (class, x, y, w, h, score)
 
         return result
 
@@ -178,6 +182,7 @@ class Detector(object):
                 img, result[i][0] + ' : %.2f' % result[i][5],
                 (x - w + 5, y - h - 7), cv2.FONT_HERSHEY_SIMPLEX, 0.5,
                 (0, 0, 0), 1, lineType)
+            
 
     def image_detector(self, imname, wait=0):
         detect_timer = Timer()
