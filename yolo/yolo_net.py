@@ -183,7 +183,7 @@ class YOLONet(object):
             iou_predict_truth = self.calc_iou(predict_boxes_tran, boxes)
 
             # calculate I tensor [BATCH_SIZE, CELL_SIZE, CELL_SIZE, BOXES_PER_CELL]
-            object_mask = tf.reduce_max(iou_predict_truth, 3, keep_dims=True)
+            object_mask = tf.reduce_max(iou_predict_truth, 3, keepdims=True)
             object_mask = tf.cast(
                 (iou_predict_truth >= object_mask), tf.float32) * response
 
