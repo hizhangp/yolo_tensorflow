@@ -39,6 +39,7 @@ class Solver(object):
         self.learning_rate = tf.train.exponential_decay(
             self.initial_learning_rate, self.global_step, self.decay_steps,
             self.decay_rate, self.staircase, name='learning_rate')
+            # decayed_learning_rate = learning_rate * decay_rate ^ int(global_step / decay_step)
         self.optimizer = tf.train.GradientDescentOptimizer(
             learning_rate=self.learning_rate)
         self.train_op = slim.learning.create_train_op(
@@ -54,9 +55,16 @@ class Solver(object):
             self.saver.restore(self.sess, self.weights_file)
 
         self.writer.add_graph(self.sess.graph)
+        
+    def save_cfg(self):
+        with open(os.path.join(self.output_dir, 'config.txt'), 'w') as f:
+            cfg_dict = cfg.__dict__
+            for key in sorted(cfg_dict.keys()):
+                if key[0].isupper():
+                    cfg_str = '{}: {}\n'.format(key, cfg_dict[key])
+                    f.write(cfg_str)
 
     def train(self):
-
         train_timer = Timer()
         load_timer = Timer()
 
@@ -77,9 +85,9 @@ class Solver(object):
                         feed_dict=feed_dict)
                     train_timer.toc()
 
-                    log_str = '''{} Epoch: {}, Step: {}, Learning rate: {},'''
-                    ''' Loss: {:5.3f}\nSpeed: {:.3f}s/iter,'''
-                    '''' Load: {:.3f}s/iter, Remain: {}'''.format(
+                    log_str = ('{} Epoch: {}, Step: {}, Learning rate: {}, '
+                            'Loss: {:5.3f}\nSpeed: {:.3f}s/iter, '
+                            'Load: {:.3f}s/iter, Remain: {}').format(
                         datetime.datetime.now().strftime('%m-%d %H:%M:%S'),
                         self.data.epoch,
                         int(step),
@@ -111,15 +119,6 @@ class Solver(object):
                 self.saver.save(
                     self.sess, self.ckpt_file, global_step=self.global_step)
 
-    def save_cfg(self):
-
-        with open(os.path.join(self.output_dir, 'config.txt'), 'w') as f:
-            cfg_dict = cfg.__dict__
-            for key in sorted(cfg_dict.keys()):
-                if key[0].isupper():
-                    cfg_str = '{}: {}\n'.format(key, cfg_dict[key])
-                    f.write(cfg_str)
-
 
 def update_config_paths(data_dir, weights_file):
     cfg.DATA_PATH = data_dir
@@ -127,14 +126,13 @@ def update_config_paths(data_dir, weights_file):
     cfg.CACHE_PATH = os.path.join(cfg.PASCAL_PATH, 'cache')
     cfg.OUTPUT_DIR = os.path.join(cfg.PASCAL_PATH, 'output')
     cfg.WEIGHTS_DIR = os.path.join(cfg.PASCAL_PATH, 'weights')
-
     cfg.WEIGHTS_FILE = os.path.join(cfg.WEIGHTS_DIR, weights_file)
 
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--weights', default="YOLO_small.ckpt", type=str)
     parser.add_argument('--data_dir', default="data", type=str)
+    parser.add_argument('--weights', default="YOLO_small.ckpt", type=str)
     parser.add_argument('--threshold', default=0.2, type=float)
     parser.add_argument('--iou_threshold', default=0.5, type=float)
     parser.add_argument('--gpu', default='', type=str)
@@ -142,16 +140,16 @@ def main():
 
     if args.gpu is not None:
         cfg.GPU = args.gpu
+        os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID" 
+        os.environ['CUDA_VISIBLE_DEVICES'] = cfg.GPU
 
     if args.data_dir != cfg.DATA_PATH:
         update_config_paths(args.data_dir, args.weights)
 
-    os.environ['CUDA_VISIBLE_DEVICES'] = cfg.GPU
-
     yolo = YOLONet()
-    pascal = pascal_voc('train')
+    data = pascal_voc('train')
 
-    solver = Solver(yolo, pascal)
+    solver = Solver(yolo, data)
 
     print('Start training ...')
     solver.train()
@@ -159,6 +157,4 @@ def main():
 
 
 if __name__ == '__main__':
-
-    # python train.py --weights YOLO_small.ckpt --gpu 0
     main()
