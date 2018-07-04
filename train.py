@@ -85,8 +85,8 @@ class Solver(object):
                         feed_dict=feed_dict)
                     train_timer.toc()
 
-                    log_str = ('{} Epoch: {}, Step: {}, Learning rate: {}, '
-                            'Loss: {:5.3f}\nSpeed: {:.3f}s/iter, '
+                    log_str = ('{} Epoch: {}, Step: {}, Learning rate: {:.6f}, '
+                            'Loss: {:.3f}\nSpeed: {:.3f}s/iter, '
                             'Load: {:.3f}s/iter, Remain: {}').format(
                         datetime.datetime.now().strftime('%m-%d %H:%M:%S'),
                         self.data.epoch,
@@ -146,7 +146,7 @@ def main():
     if args.data_dir != cfg.DATA_PATH:
         update_config_paths(args.data_dir, args.weights)
 
-    yolo = YOLONet()
+    yolo = YOLONet(True)
     data = pascal_voc('train')
 
     solver = Solver(yolo, data)
