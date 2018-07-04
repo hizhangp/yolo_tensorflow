@@ -217,15 +217,19 @@ class YOLONet(object):
                 name='coord_loss') * self.coord_scale
 
             # object_loss
-            object_delta = object_mask * (predict_scales - response)
             # object_delta = object_mask * (predict_scales - iou_predict_truth)
+                # the original code
+            object_delta = object_mask * (predict_scales - response)
+                # according to the equation presented in the paper
             object_loss = tf.reduce_mean(
                 tf.reduce_sum(tf.square(object_delta), axis=[1, 2, 3]),
                 name='object_loss') * self.object_scale
 
             # noobject_loss
-            noobject_delta = noobject_mask * (predict_scales - response)
             # noobject_delta = noobject_mask * predict_scales
+                # the original code
+            noobject_delta = noobject_mask * (predict_scales - response)
+                # according to the equation presented in the paper
             noobject_loss = tf.reduce_mean(
                 tf.reduce_sum(tf.square(noobject_delta), axis=[1, 2, 3]),
                 name='noobject_loss') * self.noobject_scale
