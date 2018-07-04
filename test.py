@@ -90,17 +90,14 @@ class Detector(object):
             # (S, S, B, 4)
         
         # interpret network output (x, y, w, h) using offset
-        offset = np.array(
-            [np.arange(self.cell_size)] * self.cell_size * self.boxes_per_cell)
-            # (B * S, S)
-        offset = np.reshape(
-            offset,
-            [self.boxes_per_cell, self.cell_size, self.cell_size])
-            # (B, S, S)
-        offset = np.transpose(offset, (1, 2, 0))
+        offset = np.transpose(np.reshape(np.array(
+            [np.arange(self.cell_size)] * self.cell_size * self.boxes_per_cell),
+            (self.boxes_per_cell, self.cell_size, self.cell_size)), (1, 2, 0))
+        offset_tran = np.transpose(offset, (1, 0, 2))
             # (S, S, B)
+            
         boxes[:, :, :, 0] += offset
-        boxes[:, :, :, 1] += np.transpose(offset, (1, 0, 2))
+        boxes[:, :, :, 1] += offset_tran
         boxes[:, :, :, :2] /= self.cell_size
         boxes[:, :, :, 2:] = np.square(boxes[:, :, :, 2:])
         boxes *= self.image_size
