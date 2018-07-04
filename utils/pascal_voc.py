@@ -88,7 +88,7 @@ class pascal_voc(object):
             # 25 = 1 + 4 + 20
             # label[:S, :S, 0]    ==> occupied or not
             # label[:S, :S, 1:5]  ==> cx, cy, w, h
-            # label[:S, :S, 5:]   ==> class indices
+            # label[:S, :S, 5:]   ==> class indices (C)
             
         filename = os.path.join(self.data_path, 'Annotations', index + '.xml')
         tree = ET.parse(filename)
