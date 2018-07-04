@@ -29,7 +29,6 @@ class YOLONet(object):
 
         self.learning_rate = cfg.LEARNING_RATE
         self.batch_size = cfg.BATCH_SIZE
-        self.alpha = cfg.ALPHA              # for leaky-ReLU
 
         self.offset = np.transpose(np.reshape(np.array(
             [np.arange(self.cell_size)] * self.cell_size * self.boxes_per_cell),
@@ -39,8 +38,7 @@ class YOLONet(object):
             tf.float32, [None, self.image_size, self.image_size, 3],
             name='images')
         self.logits = self.build_network(
-            self.images, num_outputs=self.output_size, alpha=self.alpha,
-            is_training=is_training)
+            self.images, num_outputs=self.output_size, is_training=is_training)
 
         if is_training:
             self.labels = tf.placeholder(
@@ -49,18 +47,17 @@ class YOLONet(object):
             self.loss_layer(self.logits, self.labels)
             self.total_loss = tf.losses.get_total_loss()
             tf.summary.scalar('total_loss', self.total_loss)
-
+        
     def build_network(self,
                       images,
                       num_outputs,
-                      alpha,
                       keep_prob=0.5,
                       is_training=True,
                       scope='yolo'):
         with tf.variable_scope(scope):
             with slim.arg_scope(
                 [slim.conv2d, slim.fully_connected],
-                activation_fn=leaky_relu(alpha),
+                activation_fn=leaky_relu(alpha=0.1),
                 weights_regularizer=slim.l2_regularizer(0.0005),
                 weights_initializer=tf.truncated_normal_initializer(0.0, 0.01)
             ):
@@ -69,6 +66,7 @@ class YOLONet(object):
                     images, np.array([[0, 0], [3, 3], [3, 3], [0, 0]]),
                     name='pad_1')
                     # (?, 454, 454, 3)
+                    # 454 = 3 + 448 + 3
                 net = slim.conv2d(
                     net, 64, 7, 2, padding='VALID', scope='conv_2')
                     # (?, 224, 224, 64)
@@ -150,14 +148,14 @@ class YOLONet(object):
                     # (?, 1470)
         return net
 
-    def calc_iou(self, boxes1, boxes2, scope='iou'):
-        """calculate ious
+    def calc_iou(self, boxes1, boxes2, scope='cals_iou'):
+        '''Calculate IoUs
         Args:
-          boxes1: 5-D tensor [BATCH_SIZE, CELL_SIZE, CELL_SIZE, BOXES_PER_CELL, 4]  ====> (x_center, y_center, w, h)
-          boxes2: 5-D tensor [BATCH_SIZE, CELL_SIZE, CELL_SIZE, BOXES_PER_CELL, 4] ===> (x_center, y_center, w, h)
+          boxes1: 5-D tensor [_, S, S, B, 4] ===> (x_center, y_center, w, h)
+          boxes2: 5-D tensor [_, S, S, B, 4] ===> (x_center, y_center, w, h)
         Return:
-          iou: 4-D tensor [BATCH_SIZE, CELL_SIZE, CELL_SIZE, BOXES_PER_CELL]
-        """
+          iou: 4-D tensor [_, S, S, B]
+        '''
         with tf.variable_scope(scope):
             # transform (x_center, y_center, w, h) to (x1, y1, x2, y2)
             boxes1_t = tf.stack([boxes1[..., 0] - boxes1[..., 2] / 2.0,
@@ -176,15 +174,13 @@ class YOLONet(object):
             lu = tf.maximum(boxes1_t[..., :2], boxes2_t[..., :2])
             rd = tf.minimum(boxes1_t[..., 2:], boxes2_t[..., 2:])
 
-            # intersection
-            intersection = tf.maximum(0.0, rd - lu)
-            inter_square = intersection[..., 0] * intersection[..., 1]
+            inter = tf.maximum(0.0, rd - lu)
+            inter_square = inter[..., 0] * inter[..., 1]
 
-            # calculate the boxs1 square and boxs2 square
-            square1 = boxes1[..., 2] * boxes1[..., 3]
-            square2 = boxes2[..., 2] * boxes2[..., 3]
+            boxes1_square = boxes1[..., 2] * boxes1[..., 3]
+            boxes2_square = boxes2[..., 2] * boxes2[..., 3]
 
-            union_square = tf.maximum(square1 + square2 - inter_square, 1e-10)
+            union_square = tf.maximum(boxes1_square + boxes2_square - inter_square, 1e-10)
 
         return tf.clip_by_value(inter_square / union_square, 0.0, 1.0)
 
@@ -280,7 +276,7 @@ class YOLONet(object):
             tf.summary.histogram('iou', iou_predict_truth)
 
 
-def leaky_relu(alpha):
-    def op(inputs):
-        return tf.nn.leaky_relu(inputs, alpha=alpha, name='leaky_relu')
+def leaky_relu(alpha=0.1):
+    def op(x):
+        return tf.nn.leaky_relu(x, alpha=alpha, name='leaky_relu')
     return op
