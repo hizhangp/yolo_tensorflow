@@ -149,79 +149,92 @@ class YOLONet(object):
             predict_classes = tf.reshape(
                 predicts[:, :self.boundary1],
                 [self.batch_size, self.cell_size, self.cell_size, self.num_class])
+                # (?, 980) => (64, 7, 7, 20)
             predict_scales = tf.reshape(
                 predicts[:, self.boundary1:self.boundary2],
                 [self.batch_size, self.cell_size, self.cell_size, self.boxes_per_cell])
-            predict_boxes = tf.reshape(
+                # (?, 98) => (64, 7, 7, 2)
+            predict_boxes_coord  = tf.reshape(
                 predicts[:, self.boundary2:],
                 [self.batch_size, self.cell_size, self.cell_size, self.boxes_per_cell, 4])
-
+                # (?, 392) ==> (64, 7, 7, 2, 4)
+                
+            # response: contain objects or not
             response = tf.reshape(
                 labels[..., 0],
                 [self.batch_size, self.cell_size, self.cell_size, 1])
             boxes = tf.reshape(
                 labels[..., 1:5],
                 [self.batch_size, self.cell_size, self.cell_size, 1, 4])
+                # (64, 7, 7, 1, 4)
+            # Bounding Box, normalized into the range [0, 1]
             boxes = tf.tile(
                 boxes, [1, 1, 1, self.boxes_per_cell, 1]) / self.image_size
+                # (64, 7, 7, 2, 4)
             classes = labels[..., 5:]
+                # (?, 7, 7, 20)
 
             offset = np.transpose(np.reshape(np.array(
                 [np.arange(self.cell_size)] * self.cell_size * self.boxes_per_cell),
                 (self.boxes_per_cell, self.cell_size, self.cell_size)), (1, 2, 0))
+                # (7, 7, 2)
             offset = tf.reshape(
                 tf.constant(offset, dtype=tf.float32),
                 [1, self.cell_size, self.cell_size, self.boxes_per_cell])
+                # (1, 7, 7, 2)
             offset = tf.tile(offset, [self.batch_size, 1, 1, 1])
+                # (64, 7, 7, 2)
             offset_tran = tf.transpose(offset, (0, 2, 1, 3))
 
-            predict_boxes_tran = tf.stack(
-                [(predict_boxes[..., 0] + offset) / self.cell_size,
-                 (predict_boxes[..., 1] + offset_tran) / self.cell_size,
-                 tf.square(predict_boxes[..., 2]),
-                 tf.square(predict_boxes[..., 3])], axis=-1)
+            predict_boxes = tf.stack(
+                [(predict_boxes_coord[..., 0] + offset) / self.cell_size,
+                 (predict_boxes_coord[..., 1] + offset_tran) / self.cell_size,
+                 tf.square(predict_boxes_coord[..., 2]),
+                 tf.square(predict_boxes_coord[..., 3])], axis=-1)
 
-            iou_predict_truth = self.calc_iou(predict_boxes_tran, boxes)
+            iou_predict_truth = self.calc_iou(predict_boxes, boxes)
 
-            # calculate I tensor [BATCH_SIZE, CELL_SIZE, CELL_SIZE, BOXES_PER_CELL]
-            object_mask = tf.reduce_max(iou_predict_truth, 3, keepdims=True)
+            # calculate I_obj tensor (?, S, S, B)
+            object_mask = tf.reduce_max(iou_predict_truth, axis=3, keepdims=True)
             object_mask = tf.cast(
                 (iou_predict_truth >= object_mask), tf.float32) * response
 
-            # calculate no_I tensor [CELL_SIZE, CELL_SIZE, BOXES_PER_CELL]
+            # calculate I_noobj tensor (S, S, B)
             noobject_mask = tf.ones_like(
                 object_mask, dtype=tf.float32) - object_mask
 
-            boxes_tran = tf.stack(
+            boxes_coord = tf.stack(
                 [boxes[..., 0] * self.cell_size - offset,
                  boxes[..., 1] * self.cell_size - offset_tran,
                  tf.sqrt(boxes[..., 2]),
                  tf.sqrt(boxes[..., 3])], axis=-1)
+                 
+            # coord_loss
+            coord_mask = tf.expand_dims(object_mask, -1)
+            boxes_delta = coord_mask * (predict_boxes_coord - boxes_coord)
+            coord_loss = tf.reduce_mean(
+                tf.reduce_sum(tf.square(boxes_delta), axis=[1, 2, 3, 4]),
+                name='coord_loss') * self.coord_scale
+
+            # object_loss
+            object_delta = object_mask * (predict_scales - response)
+            # object_delta = object_mask * (predict_scales - iou_predict_truth)
+            object_loss = tf.reduce_mean(
+                tf.reduce_sum(tf.square(object_delta), axis=[1, 2, 3]),
+                name='object_loss') * self.object_scale
+
+            # noobject_loss
+            noobject_delta = noobject_mask * (predict_scales - response)
+            # noobject_delta = noobject_mask * predict_scales
+            noobject_loss = tf.reduce_mean(
+                tf.reduce_sum(tf.square(noobject_delta), axis=[1, 2, 3]),
+                name='noobject_loss') * self.noobject_scale
 
             # class_loss
             class_delta = response * (predict_classes - classes)
             class_loss = tf.reduce_mean(
                 tf.reduce_sum(tf.square(class_delta), axis=[1, 2, 3]),
                 name='class_loss') * self.class_scale
-
-            # object_loss
-            object_delta = object_mask * (predict_scales - iou_predict_truth)
-            object_loss = tf.reduce_mean(
-                tf.reduce_sum(tf.square(object_delta), axis=[1, 2, 3]),
-                name='object_loss') * self.object_scale
-
-            # noobject_loss
-            noobject_delta = noobject_mask * predict_scales
-            noobject_loss = tf.reduce_mean(
-                tf.reduce_sum(tf.square(noobject_delta), axis=[1, 2, 3]),
-                name='noobject_loss') * self.noobject_scale
-
-            # coord_loss
-            coord_mask = tf.expand_dims(object_mask, 4)
-            boxes_delta = coord_mask * (predict_boxes - boxes_tran)
-            coord_loss = tf.reduce_mean(
-                tf.reduce_sum(tf.square(boxes_delta), axis=[1, 2, 3, 4]),
-                name='coord_loss') * self.coord_scale
 
             tf.losses.add_loss(class_loss)
             tf.losses.add_loss(object_loss)
