@@ -86,9 +86,9 @@ class pascal_voc(object):
     def load_pascal_annotation(self, index):
         label = np.zeros((self.cell_size, self.cell_size, 25))
             # 25 = 1 + 4 + 20
-            # label[:, :, 0]    ==> occupied or not
-            # label[:, :, 1:5]  ==> cx, cy, w, h
-            # label[:, :, 5:]   ==> class indices
+            # label[:S, :S, 0]    ==> occupied or not
+            # label[:S, :S, 1:5]  ==> cx, cy, w, h
+            # label[:S, :S, 5:]   ==> class indices
             
         filename = os.path.join(self.data_path, 'Annotations', index + '.xml')
         tree = ET.parse(filename)
