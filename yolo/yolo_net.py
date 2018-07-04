@@ -9,16 +9,18 @@ class YOLONet(object):
 
     def __init__(self, is_training=True):
         self.classes = cfg.CLASSES
-        self.num_class = len(self.classes)
-        self.image_size = cfg.IMAGE_SIZE
-        self.cell_size = cfg.CELL_SIZE
-        self.boxes_per_cell = cfg.BOXES_PER_CELL
+        self.num_class = len(self.classes)                      # C = 20
+        self.image_size = cfg.IMAGE_SIZE                        # 448  
+        self.cell_size = cfg.CELL_SIZE                          # S = 7
+        self.boxes_per_cell = cfg.BOXES_PER_CELL                # B = 2   
         self.output_size = (self.cell_size * self.cell_size) *\
-            (self.num_class + self.boxes_per_cell * 5)
-        self.scale = 1.0 * self.image_size / self.cell_size
+            (self.boxes_per_cell * 5 + self.num_class)          # 1470 = S x S x (B * 5 + C)
+        self.scale = self.image_size / self.cell_size
         self.boundary1 = self.cell_size * self.cell_size * self.num_class
+            # S x S x C = 980   
         self.boundary2 = self.boundary1 +\
             self.cell_size * self.cell_size * self.boxes_per_cell
+            # S x S x C + S x S x B = 980 + 98 = 1078
 
         self.object_scale = cfg.OBJECT_SCALE
         self.noobject_scale = cfg.NOOBJECT_SCALE
@@ -27,7 +29,7 @@ class YOLONet(object):
 
         self.learning_rate = cfg.LEARNING_RATE
         self.batch_size = cfg.BATCH_SIZE
-        self.alpha = cfg.ALPHA
+        self.alpha = cfg.ALPHA              # for leaky-ReLU
 
         self.offset = np.transpose(np.reshape(np.array(
             [np.arange(self.cell_size)] * self.cell_size * self.boxes_per_cell),
@@ -62,51 +64,90 @@ class YOLONet(object):
                 weights_regularizer=slim.l2_regularizer(0.0005),
                 weights_initializer=tf.truncated_normal_initializer(0.0, 0.01)
             ):
+                # images (?, 448, 448, 3)
                 net = tf.pad(
                     images, np.array([[0, 0], [3, 3], [3, 3], [0, 0]]),
                     name='pad_1')
+                    # (?, 454, 454, 3)
                 net = slim.conv2d(
                     net, 64, 7, 2, padding='VALID', scope='conv_2')
+                    # (?, 224, 224, 64)
+                    # here, 'VALID' means no padding.
                 net = slim.max_pool2d(net, 2, padding='SAME', scope='pool_3')
+                    # (?, 112, 112, 64)
+                    # here, 'SAME' means zero-paddings.
                 net = slim.conv2d(net, 192, 3, scope='conv_4')
+                    # (?, 112, 112, 192)
                 net = slim.max_pool2d(net, 2, padding='SAME', scope='pool_5')
+                    # (?, 56, 56, 192)
                 net = slim.conv2d(net, 128, 1, scope='conv_6')
+                    # (?, 56, 56, 192)
                 net = slim.conv2d(net, 256, 3, scope='conv_7')
+                    # (?, 56, 56, 256)
                 net = slim.conv2d(net, 256, 1, scope='conv_8')
+                    # (?, 56, 56, 256)
                 net = slim.conv2d(net, 512, 3, scope='conv_9')
+                    # (?, 56, 56, 512)
                 net = slim.max_pool2d(net, 2, padding='SAME', scope='pool_10')
+                    # (?, 28, 28, 512)
                 net = slim.conv2d(net, 256, 1, scope='conv_11')
+                    # (?, 28, 28, 256)
                 net = slim.conv2d(net, 512, 3, scope='conv_12')
+                    # (?, 28, 28, 512)
                 net = slim.conv2d(net, 256, 1, scope='conv_13')
+                    # (?, 28, 28, 256)
                 net = slim.conv2d(net, 512, 3, scope='conv_14')
+                    # (?, 28, 28, 512)
                 net = slim.conv2d(net, 256, 1, scope='conv_15')
+                    # (?, 28, 28, 256)
                 net = slim.conv2d(net, 512, 3, scope='conv_16')
+                    # (?, 28, 28, 512)
                 net = slim.conv2d(net, 256, 1, scope='conv_17')
+                    # (?, 28, 28, 256)
                 net = slim.conv2d(net, 512, 3, scope='conv_18')
+                    # (?, 28, 28, 512)
                 net = slim.conv2d(net, 512, 1, scope='conv_19')
+                    # (?, 28, 28, 512)
                 net = slim.conv2d(net, 1024, 3, scope='conv_20')
+                    # (?, 28, 28, 1024)
                 net = slim.max_pool2d(net, 2, padding='SAME', scope='pool_21')
+                    # (?, 14, 14, 1024)
                 net = slim.conv2d(net, 512, 1, scope='conv_22')
+                    # (?, 14, 14, 512)
                 net = slim.conv2d(net, 1024, 3, scope='conv_23')
+                    # (?, 14, 14, 1024)
                 net = slim.conv2d(net, 512, 1, scope='conv_24')
+                    # (?, 14, 14, 512)
                 net = slim.conv2d(net, 1024, 3, scope='conv_25')
+                    # (?, 14, 14, 1024)
                 net = slim.conv2d(net, 1024, 3, scope='conv_26')
+                    # (?, 14, 14, 1024)
                 net = tf.pad(
                     net, np.array([[0, 0], [1, 1], [1, 1], [0, 0]]),
                     name='pad_27')
+                    # (?, 16, 16, 1024)
                 net = slim.conv2d(
                     net, 1024, 3, 2, padding='VALID', scope='conv_28')
+                    # (?, 7, 7, 1024)
                 net = slim.conv2d(net, 1024, 3, scope='conv_29')
+                    # (?, 7, 7, 1024)
                 net = slim.conv2d(net, 1024, 3, scope='conv_30')
+                    # (?, 7, 7, 1024)
                 net = tf.transpose(net, [0, 3, 1, 2], name='trans_31')
+                    # (?, 1024, 7, 7)
                 net = slim.flatten(net, scope='flat_32')
+                    # (?, 50176)
                 net = slim.fully_connected(net, 512, scope='fc_33')
+                    # (?, 512)
                 net = slim.fully_connected(net, 4096, scope='fc_34')
+                    # (?, 4096)
                 net = slim.dropout(
                     net, keep_prob=keep_prob, is_training=is_training,
                     scope='dropout_35')
+                    # (?, 4096)
                 net = slim.fully_connected(
                     net, num_outputs, activation_fn=None, scope='fc_36')
+                    # (?, 1470)
         return net
 
     def calc_iou(self, boxes1, boxes2, scope='iou'):
