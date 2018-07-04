@@ -30,10 +30,6 @@ class YOLONet(object):
         self.learning_rate = cfg.LEARNING_RATE
         self.batch_size = cfg.BATCH_SIZE
 
-        self.offset = np.transpose(np.reshape(np.array(
-            [np.arange(self.cell_size)] * self.cell_size * self.boxes_per_cell),
-            (self.boxes_per_cell, self.cell_size, self.cell_size)), (1, 2, 0))
-
         self.images = tf.placeholder(
             tf.float32, [None, self.image_size, self.image_size, 3],
             name='images')
@@ -148,42 +144,6 @@ class YOLONet(object):
                     # (?, 1470)
         return net
 
-    def calc_iou(self, boxes1, boxes2, scope='cals_iou'):
-        '''Calculate IoUs
-        Args:
-          boxes1: 5-D tensor [_, S, S, B, 4] ===> (x_center, y_center, w, h)
-          boxes2: 5-D tensor [_, S, S, B, 4] ===> (x_center, y_center, w, h)
-        Return:
-          iou: 4-D tensor [_, S, S, B]
-        '''
-        with tf.variable_scope(scope):
-            # transform (x_center, y_center, w, h) to (x1, y1, x2, y2)
-            boxes1_t = tf.stack([boxes1[..., 0] - boxes1[..., 2] / 2.0,
-                                 boxes1[..., 1] - boxes1[..., 3] / 2.0,
-                                 boxes1[..., 0] + boxes1[..., 2] / 2.0,
-                                 boxes1[..., 1] + boxes1[..., 3] / 2.0],
-                                axis=-1)
-
-            boxes2_t = tf.stack([boxes2[..., 0] - boxes2[..., 2] / 2.0,
-                                 boxes2[..., 1] - boxes2[..., 3] / 2.0,
-                                 boxes2[..., 0] + boxes2[..., 2] / 2.0,
-                                 boxes2[..., 1] + boxes2[..., 3] / 2.0],
-                                axis=-1)
-
-            # calculate the left up point & right down point
-            lu = tf.maximum(boxes1_t[..., :2], boxes2_t[..., :2])
-            rd = tf.minimum(boxes1_t[..., 2:], boxes2_t[..., 2:])
-
-            inter = tf.maximum(0.0, rd - lu)
-            inter_square = inter[..., 0] * inter[..., 1]
-
-            boxes1_square = boxes1[..., 2] * boxes1[..., 3]
-            boxes2_square = boxes2[..., 2] * boxes2[..., 3]
-
-            union_square = tf.maximum(boxes1_square + boxes2_square - inter_square, 1e-10)
-
-        return tf.clip_by_value(inter_square / union_square, 0.0, 1.0)
-
     def loss_layer(self, predicts, labels, scope='loss_layer'):
         with tf.variable_scope(scope):
             predict_classes = tf.reshape(
@@ -206,11 +166,15 @@ class YOLONet(object):
                 boxes, [1, 1, 1, self.boxes_per_cell, 1]) / self.image_size
             classes = labels[..., 5:]
 
+            offset = np.transpose(np.reshape(np.array(
+                [np.arange(self.cell_size)] * self.cell_size * self.boxes_per_cell),
+                (self.boxes_per_cell, self.cell_size, self.cell_size)), (1, 2, 0))
             offset = tf.reshape(
-                tf.constant(self.offset, dtype=tf.float32),
+                tf.constant(offset, dtype=tf.float32),
                 [1, self.cell_size, self.cell_size, self.boxes_per_cell])
             offset = tf.tile(offset, [self.batch_size, 1, 1, 1])
             offset_tran = tf.transpose(offset, (0, 2, 1, 3))
+
             predict_boxes_tran = tf.stack(
                 [(predict_boxes[..., 0] + offset) / self.cell_size,
                  (predict_boxes[..., 1] + offset_tran) / self.cell_size,
@@ -274,6 +238,42 @@ class YOLONet(object):
             tf.summary.histogram('boxes_delta_w', boxes_delta[..., 2])
             tf.summary.histogram('boxes_delta_h', boxes_delta[..., 3])
             tf.summary.histogram('iou', iou_predict_truth)
+
+    def calc_iou(self, boxes1, boxes2, scope='cals_iou'):
+        '''Calculate IoUs
+        Args:
+          boxes1: 5-D tensor [_, S, S, B, 4] ===> (x_center, y_center, w, h)
+          boxes2: 5-D tensor [_, S, S, B, 4] ===> (x_center, y_center, w, h)
+        Return:
+          iou: 4-D tensor [_, S, S, B]
+        '''
+        with tf.variable_scope(scope):
+            # transform (x_center, y_center, w, h) to (x1, y1, x2, y2)
+            boxes1_t = tf.stack([boxes1[..., 0] - boxes1[..., 2] / 2.0,
+                                 boxes1[..., 1] - boxes1[..., 3] / 2.0,
+                                 boxes1[..., 0] + boxes1[..., 2] / 2.0,
+                                 boxes1[..., 1] + boxes1[..., 3] / 2.0],
+                                axis=-1)
+
+            boxes2_t = tf.stack([boxes2[..., 0] - boxes2[..., 2] / 2.0,
+                                 boxes2[..., 1] - boxes2[..., 3] / 2.0,
+                                 boxes2[..., 0] + boxes2[..., 2] / 2.0,
+                                 boxes2[..., 1] + boxes2[..., 3] / 2.0],
+                                axis=-1)
+
+            # calculate the left up point & right down point
+            lu = tf.maximum(boxes1_t[..., :2], boxes2_t[..., :2])
+            rd = tf.minimum(boxes1_t[..., 2:], boxes2_t[..., 2:])
+
+            inter = tf.maximum(0.0, rd - lu)
+            inter_square = inter[..., 0] * inter[..., 1]
+
+            boxes1_square = boxes1[..., 2] * boxes1[..., 3]
+            boxes2_square = boxes2[..., 2] * boxes2[..., 3]
+
+            union_square = tf.maximum(boxes1_square + boxes2_square - inter_square, 1e-10)
+
+        return tf.clip_by_value(inter_square / union_square, 0.0, 1.0)
 
 
 def leaky_relu(alpha=0.1):
