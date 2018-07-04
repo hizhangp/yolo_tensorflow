@@ -54,6 +54,12 @@ NOOBJECT_SCALE = 1.0
 CLASS_SCALE = 2.0
 COORD_SCALE = 5.0
 
+### in the paper, 
+# OBJECT_SCALE = 1.0
+# NOOBJECT_SCALE = 0.5
+# CLASS_SCALE = 1.0
+# COORD_SCALE = 5.0
+
 
 ### train/solver parameter
 
