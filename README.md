@@ -4,10 +4,10 @@ Tensorflow implementation of [YOLO](https://arxiv.org/pdf/1506.02640.pdf), inclu
 
 ### Installation
 
-1. Clone yolo_tensorflow repository
+1. Clone YOLO-tensorflow repository
 	```Shell
-	$ git clone https://github.com/sungjunhong/yolov1-tensorflow.git
-    $ cd yolo_tensorflow
+	$ git clone https://github.com/sungjunhong/YOLO-tensorflow.git
+    $ cd YOLO-tensorflow
 	```
 
 2. Download Pascal VOC dataset, and create correct directories
