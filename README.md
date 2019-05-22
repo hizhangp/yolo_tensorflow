@@ -1,4 +1,4 @@
-## YOLO_tensorflow
+## YOLO-tensorflow
 
 Tensorflow implementation of [YOLO](https://arxiv.org/pdf/1506.02640.pdf), including training and test phase.
 
