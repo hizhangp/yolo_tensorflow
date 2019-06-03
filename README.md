@@ -1,13 +1,13 @@
-## YOLO_tensorflow
+## YOLO-tensorflow
 
 Tensorflow implementation of [YOLO](https://arxiv.org/pdf/1506.02640.pdf), including training and test phase.
 
 ### Installation
 
-1. Clone yolo_tensorflow repository
+1. Clone YOLO-tensorflow repository
 	```Shell
-	$ git clone https://github.com/hizhangp/yolo_tensorflow.git
-    $ cd yolo_tensorflow
+	$ git clone https://github.com/sungjunhong/YOLO-tensorflow.git
+    $ cd YOLO-tensorflow
 	```
 
 2. Download Pascal VOC dataset, and create correct directories
@@ -16,7 +16,7 @@ Tensorflow implementation of [YOLO](https://arxiv.org/pdf/1506.02640.pdf), inclu
 	```
 
 3. Download [YOLO_small](https://drive.google.com/file/d/0B5aC8pI-akZUNVFZMmhmcVRpbTA/view?usp=sharing)
-weight file and put it in `data/weight`
+weight file and put it in `data/weights`
 
 4. Modify configuration in `yolo/config.py`
 
